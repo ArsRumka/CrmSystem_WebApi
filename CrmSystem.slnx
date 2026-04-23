@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/BuildingBlocks/">
+    <Project Path="BuildingBlocks.Application/BuildingBlocks.Application.csproj" />
+    <Project Path="BuildingBlocks.Domain/BuildingBlocks.Domain.csproj" />
+    <Project Path="BuildingBlocks.Infrastructure/BuildingBlocks.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/Modules/" />
+  <Folder Name="/Modules/Identity/">
+    <Project Path="Identity.Application/Identity.Application.csproj" Id="3ea95c4b-e662-442e-9b16-9f7983d5990a" />
+    <Project Path="Identity.Domain/Identity.Domain.csproj" Id="791a2c89-ad32-4305-90d5-d0c6d3f2448d" />
+    <Project Path="Identity.Infrastructure/Identity.Infrastructure.csproj" Id="c6ad6414-6f61-46b2-8bb1-1a9d8b77f02b" />
+    <Project Path="Identity.Presentation/Identity.Presentation.csproj" Id="79f6d220-3e3a-468d-94e5-d796936696bd" />
+  </Folder>
+  <Project Path="CrmSystem/CrmSystem.csproj" />
+  <Project Path="Infrastructure/Infrastructure.csproj" Id="793b8140-b7e3-4196-bc08-bf3cf1247b9b" />
+</Solution>
