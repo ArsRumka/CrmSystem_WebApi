@@ -6,9 +6,11 @@ public interface IModuleRepository
 {
     Task<Module?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
-    Task<Module?> GetByNameAsync(Guid organizationId, string name, CancellationToken cancellationToken = default);
+    Task<Module?> GetByCodeAsync(string code, CancellationToken cancellationToken = default);
 
-    Task<bool> ExistsByNameAsync(Guid organizationId, string name, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Module>> GetAllAsync(CancellationToken cancellationToken = default);
+
+    Task<bool> ExistsByCodeAsync(string code, CancellationToken cancellationToken = default);
 
     Task AddAsync(Module module, CancellationToken cancellationToken = default);
 

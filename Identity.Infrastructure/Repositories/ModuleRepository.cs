@@ -20,16 +20,23 @@ public sealed class ModuleRepository : IModuleRepository
             .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
     }
 
-    public Task<Module?> GetByNameAsync(Guid organizationId, string name, CancellationToken cancellationToken = default)
+    public Task<Module?> GetByCodeAsync(string code, CancellationToken cancellationToken = default)
     {
         return _dbContext.Set<Module>()
-            .FirstOrDefaultAsync(x => x.OrganizationId == organizationId && x.Name == name, cancellationToken);
+            .FirstOrDefaultAsync(x => x.Code == code, cancellationToken);
     }
 
-    public Task<bool> ExistsByNameAsync(Guid organizationId, string name, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<Module>> GetAllAsync(CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Set<Module>()
+            .OrderBy(x => x.Name)
+            .ToListAsync(cancellationToken);
+    }
+
+    public Task<bool> ExistsByCodeAsync(string code, CancellationToken cancellationToken = default)
     {
         return _dbContext.Set<Module>()
-            .AnyAsync(x => x.OrganizationId == organizationId && x.Name == name, cancellationToken);
+            .AnyAsync(x => x.Code == code, cancellationToken);
     }
 
     public async Task AddAsync(Module module, CancellationToken cancellationToken = default)

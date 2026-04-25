@@ -26,6 +26,13 @@ public sealed class RoleRepository : IRoleRepository
             .FirstOrDefaultAsync(x => x.OrganizationId == organizationId && x.Name == name, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Role>> GetRolesByOrganizationIdAsync(Guid organizationId, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Set<Role>()
+            .Where(x => x.OrganizationId == organizationId)
+            .ToListAsync(cancellationToken);
+    }
+
     public Task<bool> ExistsByNameAsync(Guid organizationId, string name, CancellationToken cancellationToken = default)
     {
         return _dbContext.Set<Role>()
@@ -35,5 +42,10 @@ public sealed class RoleRepository : IRoleRepository
     public async Task AddAsync(Role role, CancellationToken cancellationToken = default)
     {
         await _dbContext.Set<Role>().AddAsync(role, cancellationToken);
+    }
+
+    public void Delete(Role role)
+    {
+        _dbContext.Set<Role>().Remove(role);
     }
 }

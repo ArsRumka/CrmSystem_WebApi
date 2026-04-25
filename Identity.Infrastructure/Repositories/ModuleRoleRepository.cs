@@ -14,6 +14,19 @@ public sealed class ModuleRoleRepository : IModuleRoleRepository
         _dbContext = dbContext;
     }
 
+    public Task<ModuleRole?> GetByRoleAndModuleAsync(Guid roleId, Guid moduleId, CancellationToken cancellationToken = default)
+    {
+        return _dbContext.Set<ModuleRole>()
+            .FirstOrDefaultAsync(x => x.RoleId == roleId && x.ModuleId == moduleId, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<ModuleRole>> GetByRoleIdAsync(Guid roleId, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Set<ModuleRole>()
+            .Where(x => x.RoleId == roleId)
+            .ToListAsync(cancellationToken);
+    }
+
     public Task<bool> ExistsAsync(Guid roleId, Guid moduleId, CancellationToken cancellationToken = default)
     {
         return _dbContext.Set<ModuleRole>()
@@ -28,5 +41,10 @@ public sealed class ModuleRoleRepository : IModuleRoleRepository
     public async Task AddRangeAsync(IEnumerable<ModuleRole> moduleRoles, CancellationToken cancellationToken = default)
     {
         await _dbContext.Set<ModuleRole>().AddRangeAsync(moduleRoles, cancellationToken);
+    }
+
+    public void DeleteRange(IEnumerable<ModuleRole> moduleRoles)
+    {
+        _dbContext.Set<ModuleRole>().RemoveRange(moduleRoles);
     }
 }

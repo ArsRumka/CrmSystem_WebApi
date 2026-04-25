@@ -32,6 +32,20 @@ public sealed class UserRepository : IUserRepository
             .AnyAsync(x => x.OrganizationId == organizationId && x.Email == email, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<User>> GetByRoleIdAsync(Guid roleId, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Set<User>()
+            .Where(x => x.RoleId == roleId)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<User>> GetUsersByOrganizationIdAsync(Guid organizationId, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Set<User>()
+            .Where(x => x.OrganizationId == organizationId)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task AddAsync(User user, CancellationToken cancellationToken = default)
     {
         await _dbContext.Set<User>().AddAsync(user, cancellationToken);

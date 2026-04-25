@@ -1,32 +1,34 @@
-﻿using Identity.Domain.Common;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Identity.Domain.Common;
 
-namespace Identity.Domain.Entities
+namespace Identity.Domain.Entities;
+
+public class Role : Entity
 {
-    public class Role : Entity
+    public Guid OrganizationId { get; private set; }
+    public string Name { get; private set; } = null!;
+
+    public ICollection<ModuleRole> ModuleRoles { get; private set; } = new List<ModuleRole>();
+
+    private Role() : base(Guid.Empty) { }
+
+    public Role(Guid id, Guid organizationId, string name)
+        : base(id)
     {
-        public Guid OrganizationId { get; private set; }
-        public string Name { get; private set; }
+        if (organizationId == Guid.Empty)
+            throw new ArgumentException("OrganizationId is required");
 
-        public ICollection<ModuleRole> ModuleRoles { get; private set; } = new List<ModuleRole>();
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Role name is required");
 
-        private Role() : base(Guid.Empty) { }
+        OrganizationId = organizationId;
+        Name = name;
+    }
 
-        public Role(Guid id, Guid organizationId, string name)
-            : base(id)
-        {
-            if (organizationId == Guid.Empty)
-                throw new ArgumentException("OrganizationId is required");
+    public void Rename(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Role name is required");
 
-            if (string.IsNullOrWhiteSpace(name))
-                throw new ArgumentException("Role name is required");
-
-            OrganizationId = organizationId;
-            Name = name;
-        }
+        Name = name;
     }
 }

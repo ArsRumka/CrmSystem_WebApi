@@ -1,12 +1,12 @@
-using BuildingBlocks.Application.Abstractions;
+using BuildingBlocks.Application.Abstractions.Persistence;
 
-namespace BuildingBlocks.Infrastructure.Persistence;
+namespace Infrastructure.Persistence;
 
 public sealed class UnitOfWork : IUnitOfWork
 {
-    private readonly AppDbContext _dbContext;
+    private readonly ApplicationDbContext _dbContext;
 
-    public UnitOfWork(AppDbContext dbContext)
+    public UnitOfWork(ApplicationDbContext dbContext)
     {
         _dbContext = dbContext;
     }

@@ -8,7 +8,7 @@ using System.Security.Principal;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Infrastructure.Presistence
+namespace Infrastructure.Persistence
 {
     public class ApplicationDbContext : AppDbContext
     {
@@ -19,17 +19,8 @@ namespace Infrastructure.Presistence
 
         protected override void ApplyConfigurations(ModelBuilder modelBuilder)
         {
-
             modelBuilder.ApplyConfigurationsFromAssembly(
                 typeof(Identity.Infrastructure.Configurations.UserConfiguration).Assembly);
-            modelBuilder.ApplyConfigurationsFromAssembly(
-                typeof(Identity.Infrastructure.Configurations.OrganizationConfiguration).Assembly);
-            modelBuilder.ApplyConfigurationsFromAssembly(
-                typeof(Identity.Infrastructure.Configurations.RoleConfiguration).Assembly);
-            modelBuilder.ApplyConfigurationsFromAssembly(
-                typeof(Identity.Infrastructure.Configurations.ModuleConfiguration).Assembly);
-            modelBuilder.ApplyConfigurationsFromAssembly(
-                typeof(Identity.Infrastructure.Configurations.ModuleRoleConfiguration).Assembly);
         }
     }
 }

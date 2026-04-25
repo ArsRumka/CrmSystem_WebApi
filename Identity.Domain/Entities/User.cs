@@ -1,70 +1,77 @@
-﻿using Identity.Domain.Common;
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Identity.Domain.Common;
 
-namespace Identity.Domain.Entities
+namespace Identity.Domain.Entities;
+
+public class User : Entity
 {
-    public class User : Entity
+    public Guid OrganizationId { get; private set; }
+    public Guid RoleId { get; private set; }
+    public string Name { get; private set; } = null!;
+    public string Email { get; private set; } = null!;
+    public string PasswordHash { get; private set; } = null!;
+    public bool IsActive { get; private set; }
+    public bool IsEmailConfirmed { get; private set; }
+
+    public Role? Role { get; private set; }
+
+    private User() : base(Guid.Empty) { }
+
+    public User(Guid id, Guid organizationId, Guid roleId, string name, string email, string passwordHash)
+        : base(id)
     {
-        public Guid OrganizationId { get; private set; }
-        public Guid RoleId { get; private set; }
+        if (organizationId == Guid.Empty)
+            throw new ArgumentException("OrganizationId is required");
 
-        public string Name { get; private set; }
-        public string Email { get; private set; }
-        public string PasswordHash { get; private set; }
+        if (roleId == Guid.Empty)
+            throw new ArgumentException("RoleId is required");
 
-        public bool IsActive { get; private set; }
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Name is required");
 
-        // Навигация (ОПЦИОНАЛЬНО)
-        // необходимость данной навигации под вопросом
-        public Role? Role { get; private set; }
+        if (string.IsNullOrWhiteSpace(email))
+            throw new ArgumentException("Email is required");
 
+        if (string.IsNullOrWhiteSpace(passwordHash))
+            throw new ArgumentException("Password hash is required");
 
-        private User() : base(Guid.Empty) { }
+        OrganizationId = organizationId;
+        RoleId = roleId;
+        Name = name;
+        Email = email;
+        PasswordHash = passwordHash;
+        IsActive = true;
+        IsEmailConfirmed = false;
+    }
 
-        public User(Guid id, Guid organizationId, Guid roleId,
-            string name, string email, string passwordHash)
-            : base(id)
-        {
-            if (organizationId == Guid.Empty)
-                throw new ArgumentException("OrganizationId is required");
+    public void ChangeRole(Guid newRoleId)
+    {
+        if (newRoleId == Guid.Empty)
+            throw new ArgumentException("Invalid role");
 
-            if (roleId == Guid.Empty)
-                throw new ArgumentException("RoleId is required");
+        RoleId = newRoleId;
+        Role = null;
+    }
 
-            if (string.IsNullOrWhiteSpace(name))
-                throw new ArgumentException("Name is required");
+    public void ChangePassword(string passwordHash)
+    {
+        if (string.IsNullOrWhiteSpace(passwordHash))
+            throw new ArgumentException("Password hash is required");
 
-            if (string.IsNullOrWhiteSpace(email))
-                throw new ArgumentException("Email is required");
+        PasswordHash = passwordHash;
+    }
 
-            if (string.IsNullOrWhiteSpace(passwordHash))
-                throw new ArgumentException("Password hash is required");
+    public void ConfirmEmail()
+    {
+        IsEmailConfirmed = true;
+    }
 
-            OrganizationId = organizationId;
-            RoleId = roleId;
-            Name = name;
-            Email = email;
-            PasswordHash = passwordHash;
-            IsActive = true;
-        }
+    public void Activate()
+    {
+        IsActive = true;
+    }
 
-        public void ChangeRole(Guid newRoleId)
-        {
-            if (newRoleId == Guid.Empty)
-                throw new ArgumentException("Invalid role");
-
-            RoleId = newRoleId;
-            Role = null;
-        }
-
-        public void Deactivate()
-        {
-            IsActive = false;
-        }
+    public void Deactivate()
+    {
+        IsActive = false;
     }
 }

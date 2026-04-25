@@ -10,5 +10,9 @@ public interface IUserRepository
 
     Task<bool> ExistsByEmailAsync(Guid organizationId, string email, CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<User>> GetByRoleIdAsync(Guid roleId, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<User>> GetUsersByOrganizationIdAsync(Guid organizationId, CancellationToken cancellationToken = default);
+
     Task AddAsync(User user, CancellationToken cancellationToken = default);
 }

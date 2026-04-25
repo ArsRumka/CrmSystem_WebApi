@@ -1,32 +1,26 @@
-﻿using Identity.Domain.Common;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Identity.Domain.Common;
 
-namespace Identity.Domain.Entities
+namespace Identity.Domain.Entities;
+
+public class Module : Entity
 {
-    public class Module : Entity
+    public string Code { get; private set; } = null!;
+    public string Name { get; private set; } = null!;
+
+    public ICollection<ModuleRole> ModuleRoles { get; private set; } = new List<ModuleRole>();
+
+    private Module() : base(Guid.Empty) { }
+
+    public Module(Guid id, string code, string name)
+        : base(id)
     {
-        public Guid OrganizationId { get; private set; }
-        public string Name { get; private set; }
+        if (string.IsNullOrWhiteSpace(code))
+            throw new ArgumentException("Module code is required");
 
-        public ICollection<ModuleRole> ModuleRoles { get; private set; } = new List<ModuleRole>();
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ArgumentException("Module name is required");
 
-        private Module() : base(Guid.Empty) { }
-
-        public Module(Guid id, Guid organizationId, string name)
-            : base(id)
-        {
-            if (organizationId == Guid.Empty)
-                throw new ArgumentException("OrganizationId is required");
-
-            if (string.IsNullOrWhiteSpace(name))
-                throw new ArgumentException("Module name is required");
-
-            OrganizationId = organizationId;
-            Name = name;
-        }
+        Code = code;
+        Name = name;
     }
 }
