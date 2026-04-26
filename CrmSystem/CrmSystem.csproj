@@ -25,6 +25,9 @@
     <ProjectReference Include="..\Identity.Infrastructure\Identity.Infrastructure.csproj" />
     <ProjectReference Include="..\Identity.Presentation\Identity.Presentation.csproj" />
     <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
+    <ProjectReference Include="..\Clients.Application\Clients.Application.csproj" />
+    <ProjectReference Include="..\Clients.Infrastructure\Clients.Infrastructure.csproj" />
+    <ProjectReference Include="..\Clients.Presentation\Clients.Presentation.csproj" />
   </ItemGroup>
 
 </Project>

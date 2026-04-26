@@ -1,0 +1,88 @@
+using BuildingBlocks.Application.Abstractions.Auth;
+using BuildingBlocks.Application.Abstractions.Persistence;
+using BuildingBlocks.Application.Abstractions.Time;
+using Clients.Application.Abstractions.Repositories;
+using Clients.Application.Common;
+using Clients.Application.Contracts;
+using Clients.Domain.Entities;
+using Clients.Domain.Enums;
+using FluentValidation;
+using MediatR;
+
+namespace Clients.Application.Clients;
+
+public sealed record CreateClientCommand(
+    string FirstName,
+    string LastName,
+    string? MiddleName,
+    string? Email,
+    string? Phone,
+    ClientStatus Status,
+    ClientSource Source,
+    bool AllowMarketingEmails,
+    string? Notes) : IRequest<ClientResponse>;
+
+public sealed class CreateClientCommandValidator : AbstractValidator<CreateClientCommand>
+{
+    public CreateClientCommandValidator()
+    {
+        RuleFor(x => x.FirstName).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.LastName).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.MiddleName).MaximumLength(100);
+        RuleFor(x => x.Email)
+            .MaximumLength(256)
+            .EmailAddress()
+            .When(x => !string.IsNullOrWhiteSpace(x.Email));
+        RuleFor(x => x.Phone).MaximumLength(30);
+        RuleFor(x => x.Status).IsInEnum();
+        RuleFor(x => x.Source).IsInEnum();
+        RuleFor(x => x.Notes).MaximumLength(1000);
+        RuleFor(x => x)
+            .Must(x => !string.IsNullOrWhiteSpace(x.Email) || !string.IsNullOrWhiteSpace(x.Phone))
+            .WithMessage("Email or phone must be provided");
+    }
+}
+
+public sealed class CreateClientCommandHandler : IRequestHandler<CreateClientCommand, ClientResponse>
+{
+    private readonly ICurrentUserService _currentUserService;
+    private readonly IClientRepository _clientRepository;
+    private readonly IDateTimeProvider _dateTimeProvider;
+    private readonly IUnitOfWork _unitOfWork;
+
+    public CreateClientCommandHandler(
+        ICurrentUserService currentUserService,
+        IClientRepository clientRepository,
+        IDateTimeProvider dateTimeProvider,
+        IUnitOfWork unitOfWork)
+    {
+        _currentUserService = currentUserService;
+        _clientRepository = clientRepository;
+        _dateTimeProvider = dateTimeProvider;
+        _unitOfWork = unitOfWork;
+    }
+
+    public async Task<ClientResponse> Handle(CreateClientCommand request, CancellationToken cancellationToken)
+    {
+        var organizationId = ClientsApplicationGuards.RequireOrganizationUser(_currentUserService);
+
+        var client = new Client(
+            Guid.NewGuid(),
+            organizationId,
+            request.FirstName,
+            request.LastName,
+            request.MiddleName,
+            request.Email,
+            request.Phone,
+            request.Status,
+            request.Source,
+            request.AllowMarketingEmails,
+            request.Notes,
+            _dateTimeProvider.UtcNow);
+
+        await _clientRepository.AddAsync(client, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return client.ToResponse();
+    }
+}

@@ -5,6 +5,12 @@
     <Project Path="BuildingBlocks.Infrastructure/BuildingBlocks.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/Modules/" />
+  <Folder Name="/Modules/Clients/">
+    <Project Path="Clients.Application/Clients.Application.csproj" />
+    <Project Path="Clients.Domain/Clients.Domain.csproj" />
+    <Project Path="Clients.Infrastructure/Clients.Infrastructure.csproj" />
+    <Project Path="Clients.Presentation/Clients.Presentation.csproj" />
+  </Folder>
   <Folder Name="/Modules/Identity/">
     <Project Path="Identity.Application/Identity.Application.csproj" Id="3ea95c4b-e662-442e-9b16-9f7983d5990a" />
     <Project Path="Identity.Domain/Identity.Domain.csproj" Id="791a2c89-ad32-4305-90d5-d0c6d3f2448d" />

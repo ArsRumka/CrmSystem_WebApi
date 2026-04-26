@@ -1,4 +1,7 @@
 using BuildingBlocks.Infrastructure.Persistence;
+using Clients.Application;
+using Clients.Infrastructure;
+using Clients.Presentation.Controllers;
 using CrmSystem.Middleware;
 using Identity.Application;
 using Identity.Infrastructure;
@@ -28,12 +31,15 @@ builder.Services.AddScoped<AppDbContext>(provider =>
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddIdentityApplication();
+builder.Services.AddClientsApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddIdentityInfrastructure();
+builder.Services.AddClientsInfrastructure();
 
 builder.Services
     .AddControllers()
-    .AddApplicationPart(typeof(PublicIdentityController).Assembly);
+    .AddApplicationPart(typeof(PublicIdentityController).Assembly)
+    .AddApplicationPart(typeof(ClientsController).Assembly);
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
