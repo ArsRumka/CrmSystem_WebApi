@@ -1,23 +1,26 @@
 using BuildingBlocks.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using System.Reflection;
 
 namespace Infrastructure.Persistence
 {
     public class ApplicationDbContext : AppDbContext
     {
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+        private readonly IEnumerable<IEfConfigurationAssemblyProvider> _configurationAssemblyProviders;
+
+        public ApplicationDbContext(
+            DbContextOptions<ApplicationDbContext> options,
+            IEnumerable<IEfConfigurationAssemblyProvider> configurationAssemblyProviders)
             : base(options)
         {
+            _configurationAssemblyProviders = configurationAssemblyProviders;
         }
 
         protected override void ApplyConfigurations(ModelBuilder modelBuilder)
         {
-            modelBuilder.ApplyConfigurationsFromAssembly(
-                typeof(Identity.Infrastructure.Configurations.UserConfiguration).Assembly);
-
-            modelBuilder.ApplyConfigurationsFromAssembly(
-                Assembly.Load("Clients.Infrastructure"));
+            foreach (var provider in _configurationAssemblyProviders)
+            {
+                modelBuilder.ApplyConfigurationsFromAssembly(provider.Assembly);
+            }
         }
     }
 }

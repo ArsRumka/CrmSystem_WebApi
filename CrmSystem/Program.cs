@@ -1,4 +1,7 @@
 using BuildingBlocks.Infrastructure.Persistence;
+using Catalog.Application;
+using Catalog.Infrastructure;
+using Catalog.Presentation.Controllers;
 using Clients.Application;
 using Clients.Infrastructure;
 using Clients.Presentation.Controllers;
@@ -32,14 +35,17 @@ builder.Services.AddScoped<AppDbContext>(provider =>
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddIdentityApplication();
 builder.Services.AddClientsApplication();
+builder.Services.AddCatalogApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddIdentityInfrastructure();
 builder.Services.AddClientsInfrastructure();
+builder.Services.AddCatalogInfrastructure();
 
 builder.Services
     .AddControllers()
     .AddApplicationPart(typeof(PublicIdentityController).Assembly)
-    .AddApplicationPart(typeof(ClientsController).Assembly);
+    .AddApplicationPart(typeof(ClientsController).Assembly)
+    .AddApplicationPart(typeof(CategoriesController).Assembly);
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

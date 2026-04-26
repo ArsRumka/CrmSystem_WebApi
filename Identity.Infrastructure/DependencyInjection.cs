@@ -1,9 +1,11 @@
 using Identity.Application.Abstractions.Repositories;
 using Identity.Application.Abstractions.Security;
+using Identity.Infrastructure.Configurations;
 using Identity.Infrastructure.Permissions;
 using Identity.Infrastructure.Repositories;
 using Identity.Infrastructure.Security;
 using Identity.Infrastructure.Seed;
+using Infrastructure.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Identity.Infrastructure;
@@ -12,6 +14,9 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddIdentityInfrastructure(this IServiceCollection services)
     {
+        services.AddSingleton<IEfConfigurationAssemblyProvider>(
+            new EfConfigurationAssemblyProvider(typeof(UserConfiguration).Assembly));
+
         services.AddScoped<IOrganizationRepository, OrganizationRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRoleRepository, RoleRepository>();

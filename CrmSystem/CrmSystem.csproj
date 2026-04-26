@@ -28,6 +28,9 @@
     <ProjectReference Include="..\Clients.Application\Clients.Application.csproj" />
     <ProjectReference Include="..\Clients.Infrastructure\Clients.Infrastructure.csproj" />
     <ProjectReference Include="..\Clients.Presentation\Clients.Presentation.csproj" />
+    <ProjectReference Include="..\Catalog.Application\Catalog.Application.csproj" />
+    <ProjectReference Include="..\Catalog.Infrastructure\Catalog.Infrastructure.csproj" />
+    <ProjectReference Include="..\Catalog.Presentation\Catalog.Presentation.csproj" />
   </ItemGroup>
 
 </Project>
