@@ -6,6 +6,9 @@ using Clients.Application;
 using Clients.Infrastructure;
 using Clients.Presentation.Controllers;
 using CrmSystem.Middleware;
+using Deals.Application;
+using Deals.Infrastructure;
+using Deals.Presentation.Controllers;
 using Identity.Application;
 using Identity.Infrastructure;
 using Identity.Infrastructure.Security;
@@ -36,16 +39,19 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddIdentityApplication();
 builder.Services.AddClientsApplication();
 builder.Services.AddCatalogApplication();
+builder.Services.AddDealsApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddIdentityInfrastructure();
 builder.Services.AddClientsInfrastructure();
 builder.Services.AddCatalogInfrastructure();
+builder.Services.AddDealsInfrastructure();
 
 builder.Services
     .AddControllers()
     .AddApplicationPart(typeof(PublicIdentityController).Assembly)
     .AddApplicationPart(typeof(ClientsController).Assembly)
-    .AddApplicationPart(typeof(CategoriesController).Assembly);
+    .AddApplicationPart(typeof(CategoriesController).Assembly)
+    .AddApplicationPart(typeof(DealsController).Assembly);
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
