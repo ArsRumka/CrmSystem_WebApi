@@ -2,8 +2,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Deals.Application\Deals.Application.csproj" />
-    <ProjectReference Include="..\Identity.Presentation\Identity.Presentation.csproj" />
-    <ProjectReference Include="..\Identity.Domain\Identity.Domain.csproj" />
+    <ProjectReference Include="..\..\Identity\Identity.Domain\Identity.Domain.csproj" />
+    <ProjectReference Include="..\..\Identity\Identity.Presentation\Identity.Presentation.csproj" />
   </ItemGroup>
 
   <ItemGroup>

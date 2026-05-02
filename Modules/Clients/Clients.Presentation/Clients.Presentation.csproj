@@ -2,13 +2,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Clients.Application\Clients.Application.csproj" />
-    <ProjectReference Include="..\Clients.Domain\Clients.Domain.csproj" />
-    <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Identity\Identity.Domain\Identity.Domain.csproj" />
+    <ProjectReference Include="..\..\Identity\Identity.Presentation\Identity.Presentation.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.15" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
   <PropertyGroup>

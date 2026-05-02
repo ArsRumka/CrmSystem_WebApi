@@ -21,19 +21,19 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Identity.Application\Identity.Application.csproj" />
-    <ProjectReference Include="..\Identity.Infrastructure\Identity.Infrastructure.csproj" />
-    <ProjectReference Include="..\Identity.Presentation\Identity.Presentation.csproj" />
     <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
-    <ProjectReference Include="..\Clients.Application\Clients.Application.csproj" />
-    <ProjectReference Include="..\Clients.Infrastructure\Clients.Infrastructure.csproj" />
-    <ProjectReference Include="..\Clients.Presentation\Clients.Presentation.csproj" />
-    <ProjectReference Include="..\Catalog.Application\Catalog.Application.csproj" />
-    <ProjectReference Include="..\Catalog.Infrastructure\Catalog.Infrastructure.csproj" />
-    <ProjectReference Include="..\Catalog.Presentation\Catalog.Presentation.csproj" />
-    <ProjectReference Include="..\Deals.Application\Deals.Application.csproj" />
-    <ProjectReference Include="..\Deals.Infrastructure\Deals.Infrastructure.csproj" />
-    <ProjectReference Include="..\Deals.Presentation\Deals.Presentation.csproj" />
+    <ProjectReference Include="..\Modules\Catalog\Catalog.Application\Catalog.Application.csproj" />
+    <ProjectReference Include="..\Modules\Catalog\Catalog.Infrastructure\Catalog.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Catalog\Catalog.Presentation\Catalog.Presentation.csproj" />
+    <ProjectReference Include="..\Modules\Clients\Clients.Application\Clients.Application.csproj" />
+    <ProjectReference Include="..\Modules\Clients\Clients.Infrastructure\Clients.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Clients\Clients.Presentation\Clients.Presentation.csproj" />
+    <ProjectReference Include="..\Modules\Deals\Deals.Application\Deals.Application.csproj" />
+    <ProjectReference Include="..\Modules\Deals\Deals.Infrastructure\Deals.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Deals\Deals.Presentation\Deals.Presentation.csproj" />
+    <ProjectReference Include="..\Modules\Identity\Identity.Application\Identity.Application.csproj" />
+    <ProjectReference Include="..\Modules\Identity\Identity.Infrastructure\Identity.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Identity\Identity.Presentation\Identity.Presentation.csproj" />
   </ItemGroup>
 
 </Project>
