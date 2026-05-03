@@ -9,6 +9,7 @@ using Deals.Application.Contracts;
 using Deals.Domain.Entities;
 using FluentValidation;
 using MediatR;
+using Warehouse.Application.Abstractions.Services;
 
 namespace Deals.Application.Deals;
 
@@ -30,6 +31,7 @@ public sealed class ChangeDealStageCommandHandler : IRequestHandler<ChangeDealSt
     private readonly IDealRepository _dealRepository;
     private readonly IDealStageRepository _dealStageRepository;
     private readonly IDealStageHistoryRepository _dealStageHistoryRepository;
+    private readonly IWarehouseDealCompletionService _warehouseDealCompletionService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -39,6 +41,7 @@ public sealed class ChangeDealStageCommandHandler : IRequestHandler<ChangeDealSt
         IDealRepository dealRepository,
         IDealStageRepository dealStageRepository,
         IDealStageHistoryRepository dealStageHistoryRepository,
+        IWarehouseDealCompletionService warehouseDealCompletionService,
         IDateTimeProvider dateTimeProvider,
         IUnitOfWork unitOfWork)
     {
@@ -47,6 +50,7 @@ public sealed class ChangeDealStageCommandHandler : IRequestHandler<ChangeDealSt
         _dealRepository = dealRepository;
         _dealStageRepository = dealStageRepository;
         _dealStageHistoryRepository = dealStageHistoryRepository;
+        _warehouseDealCompletionService = warehouseDealCompletionService;
         _dateTimeProvider = dateTimeProvider;
         _unitOfWork = unitOfWork;
     }
@@ -81,6 +85,15 @@ public sealed class ChangeDealStageCommandHandler : IRequestHandler<ChangeDealSt
         if (!newStage.IsActive)
         {
             throw new ConflictException("Deal stage is inactive");
+        }
+
+        if (newStage.IsFinal && newStage.IsSuccessful)
+        {
+            await _warehouseDealCompletionService.CompleteDealAsync(
+                organizationId,
+                deal.Id,
+                currentUserId,
+                cancellationToken);
         }
 
         var now = _dateTimeProvider.UtcNow;

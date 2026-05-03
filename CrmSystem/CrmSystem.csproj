@@ -34,6 +34,9 @@
     <ProjectReference Include="..\Modules\Identity\Identity.Application\Identity.Application.csproj" />
     <ProjectReference Include="..\Modules\Identity\Identity.Infrastructure\Identity.Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Identity\Identity.Presentation\Identity.Presentation.csproj" />
+    <ProjectReference Include="..\Modules\Warehouse\Warehouse.Application\Warehouse.Application.csproj" />
+    <ProjectReference Include="..\Modules\Warehouse\Warehouse.Infrastructure\Warehouse.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Warehouse\Warehouse.Presentation\Warehouse.Presentation.csproj" />
   </ItemGroup>
 
 </Project>

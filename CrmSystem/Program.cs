@@ -21,6 +21,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using Warehouse.Application;
+using Warehouse.Infrastructure;
+using Warehouse.Presentation.Controllers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,18 +43,21 @@ builder.Services.AddIdentityApplication();
 builder.Services.AddClientsApplication();
 builder.Services.AddCatalogApplication();
 builder.Services.AddDealsApplication();
+builder.Services.AddWarehouseApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddIdentityInfrastructure();
 builder.Services.AddClientsInfrastructure();
 builder.Services.AddCatalogInfrastructure();
 builder.Services.AddDealsInfrastructure();
+builder.Services.AddWarehouseInfrastructure();
 
 builder.Services
     .AddControllers()
     .AddApplicationPart(typeof(PublicIdentityController).Assembly)
     .AddApplicationPart(typeof(ClientsController).Assembly)
     .AddApplicationPart(typeof(CategoriesController).Assembly)
-    .AddApplicationPart(typeof(DealsController).Assembly);
+    .AddApplicationPart(typeof(DealsController).Assembly)
+    .AddApplicationPart(typeof(StoragesController).Assembly);
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

@@ -1,9 +1,8 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\BuildingBlocks\BuildingBlocks.Application\BuildingBlocks.Application.csproj" />
-    <ProjectReference Include="..\..\Warehouse\Warehouse.Application\Warehouse.Application.csproj" />
-    <ProjectReference Include="..\Deals.Domain\Deals.Domain.csproj" />
+    <ProjectReference Include="..\Warehouse.Domain\Warehouse.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -19,3 +18,4 @@
   </PropertyGroup>
 
 </Project>
+

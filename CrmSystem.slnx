@@ -33,6 +33,13 @@
     <Project Path="Modules/Identity/Identity.Presentation/Identity.Presentation.csproj" />
   </Folder>
 
+  <Folder Name="/Modules/Warehouse/">
+    <Project Path="Modules/Warehouse/Warehouse.Application/Warehouse.Application.csproj" />
+    <Project Path="Modules/Warehouse/Warehouse.Domain/Warehouse.Domain.csproj" />
+    <Project Path="Modules/Warehouse/Warehouse.Infrastructure/Warehouse.Infrastructure.csproj" />
+    <Project Path="Modules/Warehouse/Warehouse.Presentation/Warehouse.Presentation.csproj" />
+  </Folder>
+
   <Project Path="CrmSystem/CrmSystem.csproj" />
   <Project Path="Infrastructure/Infrastructure.csproj" />
 </Solution>
