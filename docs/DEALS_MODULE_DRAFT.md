@@ -18,11 +18,10 @@ docs/DEALS_MODULE.md
 - `Deals.Presentation`;
 - migration `AddDealsMvpModule`.
 
-Deals MVP не считается полностью финальным CRM-модулем до будущих интеграций:
+После последующих итераций Deals уже интегрирован с Warehouse Core, Bonus Core и Returns Core inside Deals. Актуальный статус описан в `docs/DEALS_MODULE.md`.
 
-- Bonus;
-- Warehouse;
-- Returns;
+Deals MVP/Core уже покрывает возвраты внутри Deals module. Будущей Deals-related итерацией остаётся:
+
 - Audit.
 
 ## 2. Реализованный MVP scope
@@ -45,7 +44,6 @@ Deals MVP не реализует:
 
 - Bonus module;
 - Warehouse module;
-- Returns entities/endpoints;
 - Audit module;
 - stock checks;
 - stock movements;
@@ -199,11 +197,11 @@ BonusDiscountAmount = appliedBonusPoints
 FinalAmount = TotalAmount - DiscountAmount - BonusDiscountAmount
 ```
 
-MVP rule:
+Исторический MVP rule до Bonus Core:
 
 - `1 bonus point = 1 BYN`.
 
-No BonusSettings, bonus balance or BonusTransactions in MVP.
+Фактическая реализация после Bonus Core описана в `docs/DEALS_MODULE.md`: бонусная скидка рассчитывается через `PointValue`, balance и BonusSettings.
 
 ## 5. Architecture boundaries
 
@@ -290,14 +288,9 @@ Mapping:
 
 Future Deals-related work:
 
-- implement `DealReturn`;
-- implement `DealReturnItem`;
-- add return endpoints;
-- integrate successful final deals with Bonus;
-- integrate successful final deals with Warehouse;
 - add Audit events for important Deals actions.
 
-Cancellation vs return remains:
+Cancellation vs return:
 
 - `Cancelled` stage is for active/non-successful deals.
-- Return is for completed successful deals and must reverse/correct Bonus/Warehouse effects later.
+- Return is for completed successful deals and now reverses/corrects Bonus/Warehouse effects through Returns Core inside Deals.

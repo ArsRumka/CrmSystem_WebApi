@@ -10,6 +10,7 @@ public sealed record StockMovementResponse(
     string StorageName,
     Guid ProductId,
     Guid? DealId,
+    Guid? SourceReturnId,
     StockMovementType Type,
     decimal Quantity,
     decimal QuantityBefore,
@@ -29,6 +30,7 @@ internal static class StockMovementResponseMapper
             storageName,
             movement.ProductId,
             movement.DealId,
+            movement.SourceReturnId,
             movement.Type,
             movement.Quantity,
             movement.QuantityBefore,
@@ -38,4 +40,3 @@ internal static class StockMovementResponseMapper
             movement.CreatedByUserId);
     }
 }
-

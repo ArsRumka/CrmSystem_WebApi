@@ -1,3 +1,4 @@
+using Bonus.Application.Abstractions.Services;
 using BuildingBlocks.Application.Abstractions.Auth;
 using BuildingBlocks.Application.Abstractions.Persistence;
 using BuildingBlocks.Application.Abstractions.Time;
@@ -41,6 +42,7 @@ public sealed class UpdateDealCommandHandler : IRequestHandler<UpdateDealCommand
     private readonly IClientLookupService _clientLookupService;
     private readonly IUserLookupService _userLookupService;
     private readonly ICatalogLookupService _catalogLookupService;
+    private readonly IBonusDealDiscountService _bonusDealDiscountService;
     private readonly DealCalculationService _calculationService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
@@ -52,6 +54,7 @@ public sealed class UpdateDealCommandHandler : IRequestHandler<UpdateDealCommand
         IClientLookupService clientLookupService,
         IUserLookupService userLookupService,
         ICatalogLookupService catalogLookupService,
+        IBonusDealDiscountService bonusDealDiscountService,
         DealCalculationService calculationService,
         IDateTimeProvider dateTimeProvider,
         IUnitOfWork unitOfWork)
@@ -62,6 +65,7 @@ public sealed class UpdateDealCommandHandler : IRequestHandler<UpdateDealCommand
         _clientLookupService = clientLookupService;
         _userLookupService = userLookupService;
         _catalogLookupService = catalogLookupService;
+        _bonusDealDiscountService = bonusDealDiscountService;
         _calculationService = calculationService;
         _dateTimeProvider = dateTimeProvider;
         _unitOfWork = unitOfWork;
@@ -100,9 +104,22 @@ public sealed class UpdateDealCommandHandler : IRequestHandler<UpdateDealCommand
             _calculationService,
             cancellationToken);
 
+        var preBonusCalculation = _calculationService.CalculateDeal(
+            builtItems.Calculations,
+            bonusPointsUsed: 0,
+            bonusDiscountAmount: 0);
+
+        var bonusDiscount = await _bonusDealDiscountService.CalculateAsync(
+            organizationId,
+            request.ClientId,
+            preBonusCalculation.FinalAmount,
+            request.BonusPointsUsed,
+            cancellationToken);
+
         var dealCalculation = _calculationService.CalculateDeal(
             builtItems.Calculations,
-            request.BonusPointsUsed);
+            bonusDiscount.AppliedBonusPoints,
+            bonusDiscount.BonusDiscountAmount);
 
         deal.UpdateDetails(
             request.ClientId,

@@ -1,8 +1,20 @@
 # Bonus module draft
 
+## 0. Статус draft
+
+Этот документ использовался для проектирования Bonus Core. Фактический Bonus Core уже реализован.
+
+Актуальное описание реализации находится в:
+
+```text
+docs/BONUS_MODULE.md
+```
+
+Draft сохраняется как исторический design note и место для future scope. Advanced features вроде promotions, promo codes, loyalty levels, bonus expiration, birthday bonuses, marketing campaigns, returns processing и audit integration остаются будущими итерациями.
+
 ## 1. Назначение модуля
 
-`Bonus` - будущий бизнес-модуль CRM для loyalty/bonus-сценариев.
+`Bonus` - бизнес-модуль CRM для loyalty/bonus-сценариев. Core-часть уже реализована.
 
 Bonus module manages:
 
@@ -16,7 +28,7 @@ Bonus module manages:
 
 Bonus нужен для интеграции со сделками: успешная сделка может списывать бонусы клиента и начислять новые бонусы, а возврат должен корректировать ранее выполненные операции.
 
-Текущий статус проекта: Warehouse Core уже реализован и списывает товары при successful deal completion. Bonus пока не реализован и должен подключиться к тому же событию successful final deal stage.
+Текущий статус проекта: Warehouse Core и Bonus Core уже реализованы и подключены к событию successful final deal stage. Актуальный порядок интеграции описан в `docs/BONUS_MODULE.md`, `docs/DEALS_MODULE.md` и `docs/WAREHOUSE_MODULE.md`.
 
 ## 2. Архитектурные правила
 
@@ -62,7 +74,7 @@ Bonus должен повторять текущий стиль проекта:
 Правила:
 
 - `OrganizationId` обязателен.
-- Для MVP `1 bonus point = 1 BYN`.
+- Исторический draft предполагал `1 bonus point = 1 BYN`; фактический Bonus Core использует `PointValue` в `BonusSettings`.
 - `IsEnabled = false` отключает bonus write-off и accrual.
 - `MaxPaymentPercent` ограничивает максимальную часть сделки, которую можно оплатить бонусами.
 - `AccrueOnBonusPayment` определяет, начисляются ли новые бонусы, если сделка использовала бонусы.
@@ -138,9 +150,9 @@ Enums хранятся в БД как `int`.
 
 ## 5. Bonus rules
 
-MVP rules:
+Core rules:
 
-- `1 bonus point = 1 BYN`.
+- `PointValue` задаёт, сколько BYN даёт 1 bonus point.
 - Bonus write-off allowed only if `BonusSettings.IsEnabled = true`.
 - `MaxPaymentPercent` limits maximum deal amount covered by bonuses.
 - `AccrueOnBonusPayment` controls whether bonuses accrue if deal used bonuses.

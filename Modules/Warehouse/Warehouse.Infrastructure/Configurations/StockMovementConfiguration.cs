@@ -24,6 +24,9 @@ public sealed class StockMovementConfiguration : IEntityTypeConfiguration<StockM
         builder.Property(x => x.DealId)
             .IsRequired(false);
 
+        builder.Property(x => x.SourceReturnId)
+            .IsRequired(false);
+
         builder.Property(x => x.Type)
             .HasConversion<int>()
             .IsRequired();
@@ -59,8 +62,8 @@ public sealed class StockMovementConfiguration : IEntityTypeConfiguration<StockM
         builder.HasIndex(x => new { x.OrganizationId, x.StorageId });
         builder.HasIndex(x => new { x.OrganizationId, x.ProductId });
         builder.HasIndex(x => new { x.OrganizationId, x.DealId });
+        builder.HasIndex(x => new { x.OrganizationId, x.SourceReturnId });
         builder.HasIndex(x => new { x.OrganizationId, x.Type });
         builder.HasIndex(x => new { x.OrganizationId, x.CreatedAt });
     }
 }
-

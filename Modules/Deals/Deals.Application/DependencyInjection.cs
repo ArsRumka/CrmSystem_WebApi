@@ -15,6 +15,7 @@ public static class DependencyInjection
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
 
         services.AddScoped<DealCalculationService>();
+        services.AddScoped<DealReturnCalculationService>();
         services.AddScoped<IDealStageInitializer, DealStageInitializer>();
 
         return services;

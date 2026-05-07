@@ -68,8 +68,9 @@ HTTP API
 - `Identity` - foundation/runtime и permission system.
 - `Clients` - первый бизнес-модуль CRM.
 - `Catalog` - второй бизнес-модуль CRM: категории, товары и услуги.
-- `Deals` - MVP продаж и этапов сделок.
+- `Deals` - MVP/Core продаж, этапов сделок и Returns Core.
 - `Warehouse` - Core складского учёта.
+- `Bonus` - Core бонусной системы.
 
 Будущие CRM-модули должны повторять этот стиль, но не создавать собственные DbContext и отдельные базы.
 
@@ -123,7 +124,7 @@ WebApi проект `CrmSystem` должен вызвать оба метода 
 - `BonusType`/`BonusValue` и `DiscountType`/`DiscountValue` есть в `Category`, `Product`, `Service`;
 - полноценный Promotions module не реализован;
 - Deals MVP и Warehouse Core реализованы отдельными модулями;
-- Bonus module не реализован;
+- Bonus Core реализован отдельным модулем и использует Catalog bonus rules;
 - migration `AddCatalogModule` создана в `Infrastructure/Migrations`;
 - permissions используют существующую Identity permission system через module code `Catalog`;
 - нет FK на Identity `Organization`, tenant scope хранится как `OrganizationId`.
@@ -134,7 +135,7 @@ WebApi проект `CrmSystem` должен вызвать оба метода 
 
 - `Warehouse.Domain` содержит `Storage`, `ProductStock`, `StockMovement`, `StockMovementType`.
 - `Warehouse.Application` содержит MediatR use cases, validators, DTO, repository abstractions и integration abstractions.
-- `Warehouse.Infrastructure` содержит EF configurations, repositories, Catalog product lookup и Deals completion integration service.
+- `Warehouse.Infrastructure` содержит EF configurations, repositories, Catalog product lookup, Deals completion integration service и Deals return integration service.
 - `Warehouse.Presentation` содержит thin controllers для storages, stocks и movements.
 
 Архитектурные детали Warehouse:
@@ -146,8 +147,50 @@ WebApi проект `CrmSystem` должен вызвать оба метода 
 - permissions используют existing Identity permission system через module code `Warehouse`;
 - внешних FK/navigation на Catalog, Deals, Identity и Organization нет;
 - `ProductId`, `DealId`, `CreatedByUserId` хранятся как Guid;
+- `SourceReturnId` хранится как nullable Guid correlation id на `DealReturn.Id`, без FK;
 - internal Warehouse FK есть только от `ProductStocks.StorageId` и `StockMovements.StorageId` к `Storages.Id`;
 - Deals `ChangeDealStage` вызывает Warehouse integration service при successful final stage, а сохранение выполняется через общий `IUnitOfWork`.
+- Deals return completion вызывает Warehouse return integration service для Product returns; service не вызывает `SaveChangesAsync`.
+
+## Bonus как реализованный Core-модуль
+
+`Bonus` реализован как бонусный Core после Warehouse Core:
+
+- `Bonus.Domain` содержит `BonusSettings`, `BonusAccount`, `BonusTransaction`, `BonusAccrualType`, `BonusTransactionType`.
+- `Bonus.Application` содержит MediatR use cases, validators, DTO, repository abstractions и Deals integration abstractions.
+- `Bonus.Infrastructure` содержит EF configurations, repositories, Clients/Catalog/Deals lookup, completion integration services и return integration service.
+- `Bonus.Presentation` содержит thin controllers для settings, accounts и transactions.
+
+Архитектурные детали Bonus:
+
+- модуль использует общий `Infrastructure.Persistence.ApplicationDbContext`;
+- собственного `BonusDbContext` нет;
+- EF configurations подключены через `IEfConfigurationAssemblyProvider` из `AddBonusInfrastructure()`;
+- migration `AddBonusCoreModule` создана в `Infrastructure/Migrations`;
+- permissions используют existing Identity permission system через module code `Bonus`;
+- внешних FK/navigation на Clients, Deals, Catalog, Identity и Organization нет;
+- `ClientId`, `DealId`, `CreatedByUserId` и `OrganizationId` хранятся как Guid;
+- `SourceReturnId` хранится как nullable Guid correlation id на `DealReturn.Id`, без FK;
+- internal Bonus FK есть только от `BonusTransactions.BonusAccountId` к `BonusAccounts.Id`;
+- Deals `CreateDeal` и `UpdateDeal` используют `IBonusDealDiscountService` из `Bonus.Application`;
+- Deals `ChangeDealStage` вызывает Warehouse completion, затем Bonus completion, затем меняет stage/history и сохраняет через общий `IUnitOfWork`.
+- Deals return completion вызывает Warehouse return service, затем Bonus return service, затем переводит `DealReturn` в `Completed` и сохраняет все изменения через один общий `IUnitOfWork`.
+
+## Returns inside Deals
+
+Returns Core живёт внутри Deals module. Отдельного Returns module, `ReturnsDbContext` или отдельной базы нет.
+
+Архитектурные правила Returns Core:
+
+- `DealReturn` и `DealReturnItem` находятся в `Deals.Domain`;
+- EF configurations находятся в `Deals.Infrastructure`;
+- migrations остаются в `Infrastructure/Migrations`;
+- Warehouse и Bonus подключаются через Application abstractions;
+- `SourceReturnId` в `StockMovement` и `BonusTransaction` является nullable Guid correlation id без FK;
+- integration services не вызывают `SaveChangesAsync`;
+- completion возврата сохраняет DealReturn, Warehouse return movement и Bonus refund/reversal через один shared UnitOfWork.
+
+Так сохраняются modular boundaries и transaction consistency: если Bonus return падает после Warehouse return, складские изменения не попадают в БД.
 
 ## DbContext и migrations
 
@@ -181,6 +224,7 @@ services.AddSingleton<IEfConfigurationAssemblyProvider>(
 - `Catalog.Infrastructure.Configurations`.
 - `Deals.Infrastructure.Configurations`;
 - `Warehouse.Infrastructure.Configurations`.
+- `Bonus.Infrastructure.Configurations`.
 
 При добавлении нового модуля его EF configurations нужно регистрировать в DI внутри `{Module}.Infrastructure`. Не добавлять reference из `Infrastructure` на `{Module}.Infrastructure`, не использовать строковый `Assembly.Load` и не создавать отдельный DbContext.
 
@@ -198,6 +242,8 @@ Infrastructure/Migrations
 - `AddCatalogModule`
 - `AddDealsMvpModule`
 - `AddWarehouseCoreModule`
+- `AddBonusCoreModule`
+- `AddDealsReturnsCore`
 
 Команды:
 
@@ -235,6 +281,10 @@ dotnet ef migrations list --project Infrastructure --startup-project CrmSystem
 - `IStorageRepository`
 - `IProductStockRepository`
 - `IStockMovementRepository`
+- `IDealReturnRepository`
+- `IBonusSettingsRepository`
+- `IBonusAccountRepository`
+- `IBonusTransactionRepository`
 
 Неправильно:
 
@@ -311,6 +361,11 @@ Warehouse endpoints используют:
 - `Warehouse / Update`
 - `Warehouse / Delete`
 
+Bonus endpoints используют:
+
+- `Bonus / Read`
+- `Bonus / Update`
+
 Системный администратор платформы не является пользователем организации и не получает tenant permissions.
 
 ## Правила зависимостей
@@ -325,6 +380,10 @@ Warehouse endpoints используют:
 - WebApi собирает все зависимости через DI.
 
 Между бизнес-модулями не нужно строить жёсткие EF-навигации. Для связей между модулями использовать Guid ID.
+
+Bonus является примером межмодульной интеграции без внешних FK: он хранит `ClientId`, `DealId` и `CreatedByUserId` как Guid, интегрируется с Deals через `Bonus.Application` abstractions, а `Bonus.Infrastructure` реализует сервисы через общий `ApplicationDbContext`.
+
+Returns внутри Deals является примером cross-module lifecycle без нового модуля: Deals хранит `DealReturn`, Warehouse и Bonus получают `SourceReturnId` как correlation Guid без FK, а все эффекты сохраняются через общий UnitOfWork.
 
 ## Tenant scoping
 
@@ -349,6 +408,7 @@ Clients полностью tenant-scoped:
 - Не создавать отдельные DbContext на модуль.
 - Не создавать `IdentityDbContext`.
 - Не создавать `ClientsDbContext`.
+- Не создавать `BonusDbContext`.
 - Не переносить `ApplicationDbContext` из `Infrastructure/Persistence`.
 - Не переносить migrations из `Infrastructure/Migrations`.
 - Не создавать отдельные базы данных для модулей.

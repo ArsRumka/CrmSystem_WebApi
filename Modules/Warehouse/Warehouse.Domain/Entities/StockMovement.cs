@@ -9,6 +9,7 @@ public class StockMovement
     public Guid StorageId { get; private set; }
     public Guid ProductId { get; private set; }
     public Guid? DealId { get; private set; }
+    public Guid? SourceReturnId { get; private set; }
     public StockMovementType Type { get; private set; }
     public decimal Quantity { get; private set; }
     public decimal QuantityBefore { get; private set; }
@@ -33,7 +34,8 @@ public class StockMovement
         decimal quantityAfter,
         string? reason,
         DateTime createdAt,
-        Guid? createdByUserId)
+        Guid? createdByUserId,
+        Guid? sourceReturnId = null)
     {
         if (id == Guid.Empty)
             throw new ArgumentException("Id is required", nameof(id));
@@ -49,6 +51,9 @@ public class StockMovement
 
         if (dealId == Guid.Empty)
             throw new ArgumentException("DealId cannot be empty", nameof(dealId));
+
+        if (sourceReturnId == Guid.Empty)
+            throw new ArgumentException("SourceReturnId cannot be empty", nameof(sourceReturnId));
 
         if (createdByUserId == Guid.Empty)
             throw new ArgumentException("CreatedByUserId cannot be empty", nameof(createdByUserId));
@@ -73,6 +78,7 @@ public class StockMovement
         StorageId = storageId;
         ProductId = productId;
         DealId = dealId;
+        SourceReturnId = sourceReturnId;
         Type = type;
         Quantity = quantity;
         QuantityBefore = quantityBefore;
@@ -96,4 +102,3 @@ public class StockMovement
         return normalized;
     }
 }
-

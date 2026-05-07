@@ -9,9 +9,10 @@
 5. Если задача связана с Catalog, прочитать `docs/CATALOG_MODULE.md`.
 6. Если задача связана с Deals, прочитать `docs/DEALS_MODULE.md`.
 7. Если задача связана с Warehouse, прочитать `docs/WAREHOUSE_MODULE.md`.
-8. Если задача про дальнейшую разработку, прочитать `docs/DEVELOPMENT_PLAN.md`.
-9. Проверить `git status --short`.
-10. Быстро осмотреть затрагиваемые проекты и не делать предположений без чтения кода.
+8. Если задача связана с Bonus, прочитать `docs/BONUS_MODULE.md`.
+9. Если задача про дальнейшую разработку, прочитать `docs/DEVELOPMENT_PLAN.md`.
+10. Проверить `git status --short`.
+11. Быстро осмотреть затрагиваемые проекты и не делать предположений без чтения кода.
 
 ## Какие файлы читать в первую очередь
 
@@ -73,6 +74,34 @@ Warehouse:
 - `Modules/Warehouse/Warehouse.Presentation/Controllers`
 - `Infrastructure/Migrations/20260503130507_AddWarehouseCoreModule.cs`
 
+Bonus:
+
+- `Modules/Bonus/Bonus.Domain/Entities`
+- `Modules/Bonus/Bonus.Domain/Enums`
+- `Modules/Bonus/Bonus.Application/Settings`
+- `Modules/Bonus/Bonus.Application/Accounts`
+- `Modules/Bonus/Bonus.Application/Transactions`
+- `Modules/Bonus/Bonus.Application/Abstractions`
+- `Modules/Bonus/Bonus.Infrastructure/Configurations`
+- `Modules/Bonus/Bonus.Infrastructure/Repositories`
+- `Modules/Bonus/Bonus.Infrastructure/Services`
+- `Modules/Bonus/Bonus.Presentation/Controllers`
+- `Infrastructure/Migrations/20260506131632_AddBonusCoreModule.cs`
+
+Returns inside Deals:
+
+- `Modules/Deals/Deals.Domain/Entities/DealReturn.cs`
+- `Modules/Deals/Deals.Domain/Entities/DealReturnItem.cs`
+- `Modules/Deals/Deals.Domain/Enums/DealReturnStatus.cs`
+- `Modules/Deals/Deals.Application/Returns`
+- `Modules/Deals/Deals.Infrastructure/Configurations/DealReturnConfiguration.cs`
+- `Modules/Deals/Deals.Infrastructure/Configurations/DealReturnItemConfiguration.cs`
+- `Modules/Deals/Deals.Infrastructure/Repositories/DealReturnRepository.cs`
+- `Modules/Deals/Deals.Presentation/Controllers/DealReturnsController.cs`
+- `Modules/Warehouse/Warehouse.Infrastructure/Services/WarehouseDealReturnService.cs`
+- `Modules/Bonus/Bonus.Infrastructure/Services/BonusDealReturnService.cs`
+- `Infrastructure/Migrations/20260507121737_AddDealsReturnsCore.cs`
+
 ## Как составлять план
 
 Перед изменениями:
@@ -131,8 +160,11 @@ Modules or root-level module projects
 - `docs/DEVELOPMENT_PLAN.md` - completed/next modules и Known issues / risks.
 - `docs/ARCHITECTURE.md` - архитектурные детали нового модуля, EF/migration/DI integration.
 - Документ модуля `docs/{MODULE}_MODULE.md`, если его ещё нет.
+- `docs/DATABASE_OVERVIEW.md`, если файл существует и менялась модель БД.
 
 Если новый модуль интегрируется с уже существующим модулем, нужно обновить не только профильный документ нового модуля, но и документы модулей, с которыми появилась связь.
+
+Если feature меняет бизнес-жизненный цикл нескольких модулей, нужно обновить документацию всех затронутых модулей, даже если feature не является отдельным модулем.
 
 Пример: Warehouse Core обновляет:
 
@@ -140,6 +172,26 @@ Modules or root-level module projects
 - `docs/DEALS_MODULE.md` или `docs/DEALS_MODULE_DRAFT.md`;
 - `docs/DEVELOPMENT_PLAN.md`;
 - `docs/CODEX_CONTEXT.md`.
+
+Пример: Bonus Core обновляет:
+
+- `docs/BONUS_MODULE.md`;
+- `docs/DEALS_MODULE.md` или `docs/DEALS_MODULE_DRAFT.md`;
+- `docs/CATALOG_MODULE.md`;
+- `docs/WAREHOUSE_MODULE.md`;
+- `docs/DEVELOPMENT_PLAN.md`;
+- `docs/CODEX_CONTEXT.md`;
+- `docs/DATABASE_OVERVIEW.md`, если файл существует.
+
+Пример: Returns Core inside Deals обновляет:
+
+- `docs/DEALS_MODULE.md`;
+- `docs/WAREHOUSE_MODULE.md`;
+- `docs/BONUS_MODULE.md`;
+- `docs/DEVELOPMENT_PLAN.md`;
+- `docs/CODEX_CONTEXT.md`;
+- `docs/ARCHITECTURE.md`;
+- `docs/DATABASE_OVERVIEW.md`, если файл существует.
 
 В документации обязательно фиксировать:
 
@@ -184,7 +236,7 @@ Modules or root-level module projects
 - Migration: `AddCatalogModule`, файл `20260426152751_AddCatalogModule.cs`.
 - Полноценный Promotions module не реализован.
 - Deals MVP и Warehouse Core реализованы отдельными модулями.
-- Bonus module пока не реализован.
+- Bonus Core реализован и использует Catalog bonus rule fields.
 
 Endpoints:
 
@@ -273,7 +325,7 @@ dotnet ef database update --project Infrastructure --startup-project CrmSystem
 - Делать `Product.Sku` unique.
 - Добавлять `ServiceCode`.
 - Добавлять Currency/VAT/tax fields в Catalog.
-- Реализовывать Promotions, Warehouse, Deals или Bonus внутри Catalog.
+- Реализовывать Promotions, Warehouse, Deals или Bonus accounts/transactions/settings внутри Catalog.
 
 ## Особенности Identity при тестировании
 

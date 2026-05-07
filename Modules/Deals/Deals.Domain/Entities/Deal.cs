@@ -190,9 +190,6 @@ public class Deal
         if (bonusDiscountAmount > totalAmount - discountAmount)
             throw new ArgumentException("BonusDiscountAmount cannot exceed remaining amount", nameof(bonusDiscountAmount));
 
-        if (bonusPointsUsed != bonusDiscountAmount)
-            throw new ArgumentException("BonusPointsUsed must equal BonusDiscountAmount in Deals MVP", nameof(bonusPointsUsed));
-
         if (finalAmount != totalAmount - discountAmount - bonusDiscountAmount)
             throw new ArgumentException("FinalAmount must equal TotalAmount minus discounts", nameof(finalAmount));
     }

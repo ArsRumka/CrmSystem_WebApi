@@ -1,3 +1,4 @@
+using Bonus.Application.Abstractions.Services;
 using BuildingBlocks.Application.Abstractions.Auth;
 using BuildingBlocks.Application.Abstractions.Persistence;
 using BuildingBlocks.Application.Abstractions.Time;
@@ -32,6 +33,7 @@ public sealed class ChangeDealStageCommandHandler : IRequestHandler<ChangeDealSt
     private readonly IDealStageRepository _dealStageRepository;
     private readonly IDealStageHistoryRepository _dealStageHistoryRepository;
     private readonly IWarehouseDealCompletionService _warehouseDealCompletionService;
+    private readonly IBonusDealCompletionService _bonusDealCompletionService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -42,6 +44,7 @@ public sealed class ChangeDealStageCommandHandler : IRequestHandler<ChangeDealSt
         IDealStageRepository dealStageRepository,
         IDealStageHistoryRepository dealStageHistoryRepository,
         IWarehouseDealCompletionService warehouseDealCompletionService,
+        IBonusDealCompletionService bonusDealCompletionService,
         IDateTimeProvider dateTimeProvider,
         IUnitOfWork unitOfWork)
     {
@@ -51,6 +54,7 @@ public sealed class ChangeDealStageCommandHandler : IRequestHandler<ChangeDealSt
         _dealStageRepository = dealStageRepository;
         _dealStageHistoryRepository = dealStageHistoryRepository;
         _warehouseDealCompletionService = warehouseDealCompletionService;
+        _bonusDealCompletionService = bonusDealCompletionService;
         _dateTimeProvider = dateTimeProvider;
         _unitOfWork = unitOfWork;
     }
@@ -90,6 +94,12 @@ public sealed class ChangeDealStageCommandHandler : IRequestHandler<ChangeDealSt
         if (newStage.IsFinal && newStage.IsSuccessful)
         {
             await _warehouseDealCompletionService.CompleteDealAsync(
+                organizationId,
+                deal.Id,
+                currentUserId,
+                cancellationToken);
+
+            await _bonusDealCompletionService.CompleteDealAsync(
                 organizationId,
                 deal.Id,
                 currentUserId,

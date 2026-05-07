@@ -41,13 +41,17 @@ Solution: `CrmSystem.slnx`.
 - `Catalog.Infrastructure` - EF configurations и repository implementations Catalog.
 - `Catalog.Presentation` - thin API controllers Catalog.
 - `Deals.Domain` - доменная модель Deals.
-- `Deals.Application` - MediatR use cases, validators, DTO, calculation/default-stage services и repository/lookup interfaces Deals.
-- `Deals.Infrastructure` - EF configurations, repository implementations и lookup services Deals.
-- `Deals.Presentation` - thin API controllers Deals.
+- `Deals.Application` - MediatR use cases, validators, DTO, calculation/default-stage/return services и repository/lookup interfaces Deals.
+- `Deals.Infrastructure` - EF configurations, repository implementations, lookup services и return repository Deals.
+- `Deals.Presentation` - thin API controllers Deals, включая returns endpoints.
 - `Warehouse.Domain` - доменная модель Warehouse.
 - `Warehouse.Application` - MediatR use cases, validators, DTO, repository/service abstractions Warehouse.
-- `Warehouse.Infrastructure` - EF configurations, repositories, Catalog lookup и Deals completion integration Warehouse.
+- `Warehouse.Infrastructure` - EF configurations, repositories, Catalog lookup, Deals completion integration и Deals return integration Warehouse.
 - `Warehouse.Presentation` - thin API controllers Warehouse.
+- `Bonus.Domain` - доменная модель Bonus.
+- `Bonus.Application` - MediatR use cases, validators, DTO, repository/service abstractions Bonus.
+- `Bonus.Infrastructure` - EF configurations, repositories, Clients/Catalog/Deals lookup, Deals completion integration и Deals return integration Bonus.
+- `Bonus.Presentation` - thin API controllers Bonus.
 - `CrmSystem` - ASP.NET Core Web API, точка входа приложения.
 
 ## Ключевые правила
@@ -77,11 +81,13 @@ Solution: `CrmSystem.slnx`.
 - **Catalog** - implemented and tested.
 - **Deals MVP** - implemented and tested.
 - **Warehouse Core** - implemented and tested.
+- **Bonus Core** - implemented.
+- **Returns Core inside Deals** - implemented.
 
 Готов фундамент проекта:
 
 - общий `ApplicationDbContext`;
-- миграции `InitialCreate`, `AddIdentityFoundation`, `AddClientsModule`, `AddCatalogModule`, `AddDealsMvpModule`, `AddWarehouseCoreModule`;
+- миграции `InitialCreate`, `AddIdentityFoundation`, `AddClientsModule`, `AddCatalogModule`, `AddDealsMvpModule`, `AddWarehouseCoreModule`, `20260506131632_AddBonusCoreModule`, `20260507121737_AddDealsReturnsCore`;
 - общий `IUnitOfWork`;
 - общие abstractions: current user, email sender, time provider;
 - common application exceptions;
@@ -173,34 +179,34 @@ Solution: `CrmSystem.slnx`.
 - VAT/tax fields отсутствуют;
 - `BonusType`/`BonusValue` и `DiscountType`/`DiscountValue` есть в `Category`, `Product`, `Service`;
 - полноценный Promotions module не реализован;
-- Bonus module не реализован;
+- Bonus Core реализован отдельным модулем и использует Catalog bonus rule fields;
 - Warehouse Core реализован отдельным модулем и использует Catalog Product через Guid без FK;
-- Deals реализован как MVP и интегрирован с Warehouse stock deduction, но не считается финально завершённым до будущих Bonus/Returns/Audit integrations;
+- Deals реализован как MVP/Core, интегрирован с Warehouse stock deduction, Bonus completion и Returns Core inside Deals;
 - Catalog EF configurations подключены через `IEfConfigurationAssemblyProvider`;
 - нет `CatalogDbContext`;
 - используется общий `ApplicationDbContext`.
 
-### Deals MVP
+### Deals MVP/Core
 
-Реализован бизнес-модуль **Deals MVP**:
+Реализован бизнес-модуль **Deals MVP/Core**:
 
 - проекты `Deals.Domain`, `Deals.Application`, `Deals.Infrastructure`, `Deals.Presentation`;
-- сущности `Deal`, `DealItem`, `DealStage`, `DealStageHistory`;
-- enums `DealItemType` и `DealDiscountType`;
+- сущности `Deal`, `DealItem`, `DealStage`, `DealStageHistory`, `DealReturn`, `DealReturnItem`;
+- enums `DealItemType`, `DealDiscountType` и `DealReturnStatus`;
 - MediatR commands/queries/handlers;
 - FluentValidation validators;
-- response DTO: `DealResponse`, `DealItemResponse`, `DealStageResponse`, `DealStageHistoryResponse`;
+- response DTO: `DealResponse`, `DealItemResponse`, `DealStageResponse`, `DealStageHistoryResponse`, `DealReturnResponse`, `DealReturnItemResponse`;
 - `CatalogItemSnapshot` для snapshot товара/услуги на момент сделки;
 - `DealCalculationService` для расчёта сумм, item discounts и capped bonus usage;
 - `IDealStageInitializer` и lazy creation default stages;
-- repository interfaces и implementations: `IDealRepository`, `IDealStageRepository`, `IDealStageHistoryRepository`;
+- repository interfaces и implementations: `IDealRepository`, `IDealStageRepository`, `IDealStageHistoryRepository`, `IDealReturnRepository`;
 - lookup services: `IClientLookupService`, `IUserLookupService`, `ICatalogLookupService`;
-- EF configurations `DealConfiguration`, `DealItemConfiguration`, `DealStageConfiguration`, `DealStageHistoryConfiguration`;
-- thin API controllers: `DealsController`, `DealStagesController`;
+- EF configurations `DealConfiguration`, `DealItemConfiguration`, `DealStageConfiguration`, `DealStageHistoryConfiguration`, `DealReturnConfiguration`, `DealReturnItemConfiguration`;
+- thin API controllers: `DealsController`, `DealStagesController`, `DealReturnsController`;
 - permissions через существующую Identity permission system;
-- migration `AddDealsMvpModule` в `Infrastructure/Migrations`.
+- migrations `AddDealsMvpModule` и `20260507121737_AddDealsReturnsCore` в `Infrastructure/Migrations`.
 
-Важные правила Deals MVP:
+Важные правила Deals MVP/Core:
 
 - все операции tenant-scoped через `OrganizationId` из `ICurrentUserService`;
 - permissions используют module code `Deals`;
@@ -208,12 +214,19 @@ Solution: `CrmSystem.slnx`.
 - `DealStage` tenant-specific и редактируемый внутри организации;
 - default stages `New`, `InProgress`, `Completed`, `Cancelled` создаются lazy при первом использовании Deals module;
 - `DealStageHistory` создаётся при создании сделки и при изменении stage;
-- `Deal` хранит `BonusPointsUsed` и `BonusDiscountAmount`, но Bonus module не реализован;
-- requested bonus points capped до остатка после item discounts, для MVP `1 bonus point = 1 BYN`;
+- `Deal` хранит `BonusPointsUsed` как applied bonus points и `BonusDiscountAmount` как денежную скидку в BYN;
+- `CreateDeal` и `UpdateDeal` используют Bonus Core для расчёта bonus discount через `PointValue`;
 - `DealItem.StorageId` используется Warehouse Core при successful final stage;
 - Product item требует `StorageId`, Service item требует `StorageId = null`;
 - при successful final stage Warehouse списывает Product items и создаёт `StockMovement` Type `Sale`;
-- Returns не реализованы, но остаются future iteration внутри Deals module;
+- при successful final stage Bonus Core списывает использованные бонусы и начисляет новые бонусы, если начисление разрешено;
+- Returns не являются отдельным модулем и реализованы внутри Deals module;
+- `DealReturnStatus`: `Draft`, `Completed`, `Cancelled`;
+- Draft returns не меняют Warehouse/Bonus;
+- completed returns создают Warehouse `Return` movement и Bonus `Refund` / `CorrectionDecrease`;
+- completed/cancelled returns immutable;
+- partial returns разрешены, но нельзя вернуть больше, чем было продано по каждой `DealItem`;
+- `SourceReturnId` добавлен в `StockMovement` и `BonusTransaction` как nullable Guid correlation id без FK;
 - если текущий stage сделки `IsFinal = true`, `UpdateDeal`, `ChangeDealStage` и `DeactivateDeal` запрещены;
 - внешних FK/navigation на Clients, Catalog, Identity или Warehouse нет;
 - EF configurations подключены через `IEfConfigurationAssemblyProvider`;
@@ -233,6 +246,7 @@ Solution: `CrmSystem.slnx`.
 - repository interfaces и implementations: `IStorageRepository`, `IProductStockRepository`, `IStockMovementRepository`;
 - lookup service `IWarehouseProductLookupService`;
 - integration service `IWarehouseDealCompletionService`;
+- return integration service `IWarehouseDealReturnService`;
 - EF configurations `StorageConfiguration`, `ProductStockConfiguration`, `StockMovementConfiguration`;
 - thin API controllers: `StoragesController`, `StocksController`, `StockMovementsController`;
 - permissions через существующую Identity permission system;
@@ -254,7 +268,44 @@ Solution: `CrmSystem.slnx`.
 - нет внешних FK/navigation на Catalog, Deals, Identity или Organization;
 - связи с Catalog, Deals и Identity только через Guid;
 - Deals `ChangeDealStage` интегрирован со stock deduction при successful final stage;
+- Deals `ChangeDealStage` выполняет Warehouse completion и Bonus completion перед stage change/history и одним общим `SaveChangesAsync`;
+- Deals return completion создаёт `StockMovement` Type `Return`, заполняет `SourceReturnId` и сохраняется одним общим UnitOfWork;
 - повторное списание сделки защищено через `StockMovement` Type `Sale` + `DealId`.
+
+### Bonus Core
+
+Реализован бизнес-модуль **Bonus Core**:
+
+- проекты `Bonus.Domain`, `Bonus.Application`, `Bonus.Infrastructure`, `Bonus.Presentation`;
+- сущности `BonusSettings`, `BonusAccount`, `BonusTransaction`;
+- enums `BonusAccrualType`, `BonusTransactionType`;
+- MediatR commands/queries/handlers;
+- FluentValidation validators;
+- response DTO: `BonusSettingsResponse`, `BonusAccountResponse`, `BonusTransactionResponse`;
+- repository interfaces и implementations: `IBonusSettingsRepository`, `IBonusAccountRepository`, `IBonusTransactionRepository`;
+- services: `IBonusDealDiscountService`, `IBonusDealCompletionService`, `IBonusDealReturnService`, `IBonusClientLookupService`;
+- Catalog bonus rule resolver для Product/Service -> Category -> parent category chain -> BonusSettings;
+- EF configurations `BonusSettingsConfiguration`, `BonusAccountConfiguration`, `BonusTransactionConfiguration`;
+- thin API controllers: `BonusSettingsController`, `BonusAccountsController`, `BonusTransactionsController`;
+- permissions через существующую Identity permission system;
+- migration `20260506131632_AddBonusCoreModule` в `Infrastructure/Migrations`.
+
+Важные правила Bonus Core:
+
+- все операции tenant-scoped через `OrganizationId` из `ICurrentUserService`;
+- permissions используют module code `Bonus`;
+- `BonusDbContext` не создавался;
+- используется общий `ApplicationDbContext`;
+- Bonus EF configurations подключены через `IEfConfigurationAssemblyProvider`;
+- внешних FK/navigation на Clients, Deals, Catalog, Identity или Organization нет;
+- связи с Clients, Deals, Catalog и Identity только через Guid;
+- `PointValue` задаёт, сколько BYN даёт 1 бонусный балл;
+- `BonusSettings` создаются лениво через `GET /api/bonus/settings`;
+- если settings отсутствуют во время расчёта/закрытия сделки, бонусная система считается выключенной;
+- ручная корректировка баланса требует reason;
+- duplicate completion защищён проверкой automated BonusTransaction by `DealId`;
+- return-origin операции считаются по `DealId`, `SourceReturnId != null` и `Type = Refund / CorrectionDecrease`;
+- `AccrueOnBonusPayment` управляет начислением, если сделка использовала бонусы.
 
 ## Seeded module codes
 
@@ -271,7 +322,7 @@ Solution: `CrmSystem.slnx`.
 - `Audit`
 - `Settings`
 
-`Clients`, `Catalog`, `Deals` и `Warehouse` уже реализованы как бизнес-модули. `Deals` реализован как MVP и не считается финально завершённым до Bonus/Returns/Audit integrations. `Warehouse` реализован как Core. Остальные CRM-коды пока являются только permission module codes или future modules.
+`Clients`, `Catalog`, `Deals`, `Warehouse` и `Bonus` уже реализованы как бизнес-модули или MVP/Core-модули. `Deals` реализован как MVP/Core с Returns Core inside Deals. `Warehouse` и `Bonus` реализованы как Core и поддерживают return integration через `SourceReturnId`. `Chat` и `Audit` пока являются permission module codes или future modules.
 
 ## Endpoints
 
@@ -344,6 +395,12 @@ Authorized organization user Deals:
 - `PUT /api/deals/{id}`
 - `PUT /api/deals/{id}/stage`
 - `DELETE /api/deals/{id}`
+- `GET /api/deals/{dealId}/returns`
+- `GET /api/deals/returns/{id}`
+- `POST /api/deals/{dealId}/returns`
+- `PUT /api/deals/returns/{id}`
+- `POST /api/deals/returns/{id}/complete`
+- `POST /api/deals/returns/{id}/cancel`
 
 Authorized organization user Warehouse:
 
@@ -360,6 +417,17 @@ Authorized organization user Warehouse:
 - `POST /api/warehouse/stocks/correction`
 - `GET /api/warehouse/movements`
 - `GET /api/warehouse/movements/{id}`
+
+Authorized organization user Bonus:
+
+- `GET /api/bonus/settings`
+- `PUT /api/bonus/settings`
+- `GET /api/bonus/accounts`
+- `GET /api/bonus/accounts/{id}`
+- `GET /api/bonus/accounts/by-client/{clientId}`
+- `POST /api/bonus/accounts/by-client/{clientId}/adjust`
+- `GET /api/bonus/transactions`
+- `GET /api/bonus/transactions/{id}`
 
 Clients permissions:
 
@@ -389,7 +457,12 @@ Warehouse permissions:
 - `Warehouse / Update`
 - `Warehouse / Delete`
 
-Важно: JWT системного администратора подходит для system-admin endpoints. Он не является пользователем организации и не должен открывать organization endpoints, включая Clients, Catalog, Deals и Warehouse.
+Bonus permissions:
+
+- `Bonus / Read`
+- `Bonus / Update`
+
+Важно: JWT системного администратора подходит для system-admin endpoints. Он не является пользователем организации и не должен открывать organization endpoints, включая Clients, Catalog, Deals, Warehouse и Bonus.
 
 ## Текущие настройки WebApi
 
@@ -397,17 +470,20 @@ Warehouse permissions:
 
 - `ApplicationDbContext` через Npgsql;
 - `AddIdentityApplication()`;
+- `AddBonusApplication()`;
 - `AddClientsApplication()`;
 - `AddCatalogApplication()`;
 - `AddDealsApplication()`;
 - `AddWarehouseApplication()`;
 - `AddInfrastructure(builder.Configuration)`;
 - `AddIdentityInfrastructure()`;
+- `AddBonusInfrastructure()`;
 - `AddClientsInfrastructure()`;
 - `AddCatalogInfrastructure()`;
 - `AddDealsInfrastructure()`;
 - `AddWarehouseInfrastructure()`;
 - controllers из `Identity.Presentation`;
+- controllers из `Bonus.Presentation`;
 - controllers из `Clients.Presentation`;
 - controllers из `Catalog.Presentation`;
 - controllers из `Deals.Presentation`;
@@ -420,11 +496,11 @@ Warehouse permissions:
 
 ## Следующий модуль
 
-После Warehouse Core следующий рекомендуемый модуль - **Bonus Core**.
+После Returns Core следующий рекомендуемый модуль - **Chat Core with SignalR**.
 
-Почему Bonus связан с текущим состоянием Deals:
+Почему Chat связан с текущим состоянием проекта:
 
-- Deals уже хранит `BonusPointsUsed` и `BonusDiscountAmount`, но не проверяет bonus balance/settings и не создаёт bonus transactions;
-- Warehouse Core уже списывает Product items со склада при successful final stage;
-- Returns принадлежат Deals module, но должны появиться после Bonus Core, чтобы корректно возвращать бонусы и складские остатки;
-- Audit лучше делать после основных бизнес-операций Bonus/Warehouse/Returns.
+- Deals уже покрывает lifecycle sale -> warehouse deduction -> bonus write-off/accrual -> return -> warehouse return -> bonus refund/reversal;
+- Chat добавит коммуникационный слой CRM без изменения core business flow;
+- Email Campaigns логично делать после Chat;
+- Audit лучше делать после Chat/Email или параллельно, чтобы логировать основные бизнес-события и коммуникации.

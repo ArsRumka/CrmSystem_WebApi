@@ -33,7 +33,7 @@ public sealed class DealConfiguration : IEntityTypeConfiguration<Deal>
             .IsRequired();
 
         builder.Property(x => x.BonusPointsUsed)
-            .HasPrecision(18, 2)
+            .HasPrecision(18, 3)
             .IsRequired();
 
         builder.Property(x => x.BonusDiscountAmount)

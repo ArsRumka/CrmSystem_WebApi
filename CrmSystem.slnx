@@ -19,6 +19,13 @@
     <Project Path="Modules/Catalog/Catalog.Presentation/Catalog.Presentation.csproj" />
   </Folder>
 
+  <Folder Name="/Modules/Bonus/">
+    <Project Path="Modules/Bonus/Bonus.Application/Bonus.Application.csproj" />
+    <Project Path="Modules/Bonus/Bonus.Domain/Bonus.Domain.csproj" />
+    <Project Path="Modules/Bonus/Bonus.Infrastructure/Bonus.Infrastructure.csproj" />
+    <Project Path="Modules/Bonus/Bonus.Presentation/Bonus.Presentation.csproj" />
+  </Folder>
+
   <Folder Name="/Modules/Deals/">
     <Project Path="Modules/Deals/Deals.Application/Deals.Application.csproj" />
     <Project Path="Modules/Deals/Deals.Domain/Deals.Domain.csproj" />

@@ -20,8 +20,8 @@ public static class DependencyInjection
         services.AddScoped<IStockMovementRepository, StockMovementRepository>();
         services.AddScoped<IWarehouseProductLookupService, WarehouseProductLookupService>();
         services.AddScoped<IWarehouseDealCompletionService, WarehouseDealCompletionService>();
+        services.AddScoped<IWarehouseDealReturnService, WarehouseDealReturnService>();
 
         return services;
     }
 }
-

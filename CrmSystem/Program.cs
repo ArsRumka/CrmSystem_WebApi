@@ -1,4 +1,7 @@
 using BuildingBlocks.Infrastructure.Persistence;
+using Bonus.Application;
+using Bonus.Infrastructure;
+using Bonus.Presentation.Controllers;
 using Catalog.Application;
 using Catalog.Infrastructure;
 using Catalog.Presentation.Controllers;
@@ -40,12 +43,14 @@ builder.Services.AddScoped<AppDbContext>(provider =>
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddIdentityApplication();
+builder.Services.AddBonusApplication();
 builder.Services.AddClientsApplication();
 builder.Services.AddCatalogApplication();
 builder.Services.AddDealsApplication();
 builder.Services.AddWarehouseApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddIdentityInfrastructure();
+builder.Services.AddBonusInfrastructure();
 builder.Services.AddClientsInfrastructure();
 builder.Services.AddCatalogInfrastructure();
 builder.Services.AddDealsInfrastructure();
@@ -54,6 +59,7 @@ builder.Services.AddWarehouseInfrastructure();
 builder.Services
     .AddControllers()
     .AddApplicationPart(typeof(PublicIdentityController).Assembly)
+    .AddApplicationPart(typeof(BonusSettingsController).Assembly)
     .AddApplicationPart(typeof(ClientsController).Assembly)
     .AddApplicationPart(typeof(CategoriesController).Assembly)
     .AddApplicationPart(typeof(DealsController).Assembly)

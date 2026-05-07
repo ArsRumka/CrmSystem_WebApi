@@ -49,29 +49,44 @@ public sealed class DealCalculationService
 
     public DealCalculation CalculateDeal(
         IEnumerable<DealItemCalculation> itemCalculations,
-        decimal requestedBonusPoints)
+        decimal bonusPointsUsed,
+        decimal bonusDiscountAmount)
     {
-        if (requestedBonusPoints < 0)
-            throw new ArgumentException("BonusPointsUsed must be greater than or equal to zero", nameof(requestedBonusPoints));
+        if (bonusPointsUsed < 0)
+            throw new ArgumentException("BonusPointsUsed must be greater than or equal to zero", nameof(bonusPointsUsed));
+
+        if (bonusDiscountAmount < 0)
+            throw new ArgumentException("BonusDiscountAmount must be greater than or equal to zero", nameof(bonusDiscountAmount));
 
         var items = itemCalculations.ToList();
         var totalAmount = RoundMoney(items.Sum(x => x.TotalAmount));
         var discountAmount = RoundMoney(items.Sum(x => x.DiscountAmount));
         var remainingAmount = RoundMoney(totalAmount - discountAmount);
-        var roundedRequestedBonusPoints = RoundMoney(requestedBonusPoints);
-        var appliedBonusPoints = Math.Min(roundedRequestedBonusPoints, remainingAmount);
-        var finalAmount = RoundMoney(totalAmount - discountAmount - appliedBonusPoints);
+        var roundedBonusPoints = RoundPoints(bonusPointsUsed);
+        var roundedBonusDiscountAmount = RoundMoney(bonusDiscountAmount);
+
+        if (roundedBonusDiscountAmount > remainingAmount)
+        {
+            throw new ArgumentException("BonusDiscountAmount cannot exceed remaining amount", nameof(bonusDiscountAmount));
+        }
+
+        var finalAmount = RoundMoney(totalAmount - discountAmount - roundedBonusDiscountAmount);
 
         return new DealCalculation(
             totalAmount,
             discountAmount,
-            appliedBonusPoints,
-            appliedBonusPoints,
+            roundedBonusPoints,
+            roundedBonusDiscountAmount,
             finalAmount);
     }
 
     private static decimal RoundMoney(decimal value)
     {
         return decimal.Round(value, 2, MidpointRounding.AwayFromZero);
+    }
+
+    private static decimal RoundPoints(decimal value)
+    {
+        return decimal.Round(value, 3, MidpointRounding.AwayFromZero);
     }
 }

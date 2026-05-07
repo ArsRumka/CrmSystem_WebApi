@@ -439,7 +439,7 @@ Seeded modules:
 - `Audit`
 - `Settings`
 
-`Clients`, `Catalog`, `Deals` и `Warehouse` уже реализованы как отдельные CRM-модули или MVP/Core-модули. `Bonus`, `Chat` и `Audit` пока являются seeded module codes для будущих бизнес-функций.
+`Clients`, `Catalog`, `Deals`, `Warehouse` и `Bonus` уже реализованы как отдельные CRM-модули или MVP/Core-модули. `Chat` и `Audit` пока являются seeded module codes для будущих бизнес-функций.
 
 ## Как тестировать через Swagger
 

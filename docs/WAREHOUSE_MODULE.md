@@ -10,7 +10,8 @@ Warehouse отвечает за:
 - ручное поступление товара;
 - ручное списание товара;
 - корректировку остатка;
-- списание товара при успешном завершении сделки.
+- списание товара при успешном завершении сделки;
+- возврат товара при завершении `DealReturn`.
 
 Warehouse Core реализован как базовый складской модуль для CRM-сценариев. Advanced ERP-функции остаются future scope.
 
@@ -37,6 +38,7 @@ Warehouse реализован как отдельный модуль:
 
 - `ProductId` - Guid товара из Catalog;
 - `DealId` - Guid сделки из Deals, nullable;
+- `SourceReturnId` - Guid возврата из Deals, nullable, correlation id без FK;
 - `CreatedByUserId` - Guid пользователя Identity, nullable;
 - `OrganizationId` - Guid организации, без FK на Identity Organization.
 
@@ -103,6 +105,7 @@ Warehouse реализован как отдельный модуль:
 - `StorageId`
 - `ProductId`
 - `DealId` nullable
+- `SourceReturnId` nullable
 - `Type`
 - `Quantity`
 - `QuantityBefore`
@@ -117,8 +120,11 @@ Warehouse реализован как отдельный модуль:
 - направление движения определяется `Type`;
 - `QuantityBefore` и `QuantityAfter` сохраняются для истории;
 - `DealId` nullable и хранится как Guid без FK на Deals;
+- `SourceReturnId` nullable и хранится как Guid correlation id на `DealReturn.Id` без FK;
 - `CreatedByUserId` nullable и хранится как Guid без FK на Identity;
 - `ProductId` хранится как Guid без FK на Catalog.
+
+`StockMovementResponse` также отдаёт `SourceReturnId`.
 
 ## StockMovementType
 
@@ -127,7 +133,7 @@ Warehouse реализован как отдельный модуль:
 - `Receipt = 1` - ручное поступление товара;
 - `WriteOff = 2` - ручное списание товара;
 - `Sale = 3` - автоматическое списание при successful final deal stage;
-- `Return = 4` - future usage для будущих возвратов;
+- `Return = 4` - автоматический возврат товара при completed `DealReturn`;
 - `Correction = 5` - ручная корректировка остатка.
 
 ## Endpoints
@@ -227,7 +233,37 @@ Warehouse:
 - списание происходит только при successful final stage;
 - Warehouse integration service не вызывает `SaveChangesAsync`;
 - изменения сохраняются через общий `IUnitOfWork` в `ChangeDealStage` handler;
-- списание склада и перевод сделки в successful final stage выполняются атомарно в одном сохранении.
+- списание склада, Bonus completion и перевод сделки в successful final stage выполняются атомарно в одном сохранении.
+
+После реализации Bonus Core порядок successful final `ChangeDealStage`:
+
+1. Warehouse completion списывает товары со склада.
+2. Bonus completion списывает/начисляет бонусы.
+3. Deal меняет stage.
+4. Добавляется `DealStageHistory`.
+5. Выполняется один общий `SaveChangesAsync`.
+
+Если Bonus completion падает после Warehouse completion, складские изменения не сохраняются, потому что общий `UnitOfWork` ещё не сохранён. Warehouse по-прежнему отвечает только за stock movements и не содержит бонусную бизнес-логику.
+
+### Возвраты сделок
+
+Warehouse поддерживает складскую часть Returns Core внутри Deals.
+
+При завершении `DealReturn`:
+
+- Warehouse обрабатывает только Product return items;
+- Service return items не затрагивают Warehouse;
+- Product return увеличивает `ProductStock`;
+- если stock row отсутствует, он создаётся;
+- создаётся `StockMovement` с `Type = Return`;
+- `DealId` заполняется id исходной сделки;
+- `SourceReturnId` заполняется `DealReturn.Id`;
+- `CreatedByUserId` заполняется пользователем, который завершил возврат;
+- `Reason` хранит причину возврата.
+
+`SourceReturnId` - nullable Guid correlation id без FK на Deals. Он нужен для трассировки и защиты от повторной обработки возврата.
+
+Warehouse return integration service не вызывает `SaveChangesAsync`. Изменения сохраняются атомарно вместе с `DealReturn` completion и Bonus refund/reversal через общий `IUnitOfWork` в Deals handler. Если Bonus return падает после Warehouse return, складские изменения не сохраняются.
 
 ## EF/database details
 
@@ -247,6 +283,7 @@ Warehouse:
 - `ProductStocks.ProductId` не имеет FK на Catalog;
 - `StockMovements.ProductId` не имеет FK на Catalog;
 - `StockMovements.DealId` не имеет FK на Deals;
+- `StockMovements.SourceReturnId` не имеет FK на Deals/DealReturn;
 - `StockMovements.CreatedByUserId` не имеет FK на Identity;
 - `OrganizationId` не имеет FK на Identity Organization.
 
@@ -254,7 +291,10 @@ Warehouse:
 
 ```text
 20260503130507_AddWarehouseCoreModule
+20260507121737_AddDealsReturnsCore
 ```
+
+`20260507121737_AddDealsReturnsCore` добавляет nullable column `StockMovements.SourceReturnId` и index `OrganizationId + SourceReturnId`.
 
 ## Out of scope / Future scope
 
@@ -269,6 +309,5 @@ Warehouse:
 - batches/lots;
 - cost price;
 - supplier returns;
-- full Returns flow;
-- Bonus integration;
+- bonus business logic inside Warehouse;
 - Audit integration.

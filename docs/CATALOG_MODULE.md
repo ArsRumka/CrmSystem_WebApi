@@ -140,7 +140,18 @@ WebApi `CrmSystem` подключает:
 - `Fixed` требует значение `> 0`;
 - `None` и `Inherit` допускают только `null` или `0`.
 
-Fixed discount может быть больше цены товара/услуги на уровне Catalog. Ограничение итоговой цены относится к будущей логике Deals/pricing.
+Fixed discount может быть больше цены товара/услуги на уровне Catalog. Ограничение итоговой цены относится к логике Deals/pricing.
+
+Bonus fields в `Product`, `Service` и `Category` используются Bonus Core для начисления бонусов при successful final deal stage.
+
+Rule resolution:
+
+1. Product/Service direct bonus rule.
+2. Если direct rule = `Inherit`, используется Category rule.
+3. Если Category тоже `Inherit`, Bonus Core идёт вверх по `ParentCategoryId`.
+4. Если category chain заканчивается, запись не найдена или rule остаётся `Inherit`, используется fallback на `BonusSettings` организации.
+
+`Inherit` означает наследование правила от категории, родительской категории или настроек организации. Inactive Catalog records могут использоваться для bonus rule resolution, если запись существует.
 
 ## 5. Currency
 
@@ -323,7 +334,6 @@ DELETE /api/catalog/services/{id}
 Catalog module намеренно не реализует:
 
 - Deals;
-- полноценный Bonus module;
 - bonus transactions;
 - organization bonus settings;
 - organization discount settings;
@@ -339,12 +349,16 @@ Catalog module намеренно не реализует:
 
 После Catalog уже реализованы:
 
-- `Deals MVP`;
-- `Warehouse Core`.
+- `Deals MVP/Core`;
+- `Warehouse Core`;
+- `Bonus Core`;
+- `Returns Core inside Deals`.
 
 Связи:
 
 - Deals использует `Product` и `Service` из Catalog через Guid и snapshot;
+- Returns Core использует уже сохранённые `DealItem` snapshots; прямой связи Catalog -> Returns нет;
 - Warehouse Core ведёт остатки только для Catalog Product;
 - inactive Catalog Product разрешён для складских операций, если Product существует в той же организации;
-- Bonus Core остаётся следующим рекомендуемым модулем.
+- Bonus Core использует `BonusType`/`BonusValue` из Product, Service и Category для rule resolution;
+- Bonus Core наследует rule по цепочке Product/Service -> Category -> parent categories -> BonusSettings.

@@ -16,6 +16,7 @@ public static class DependencyInjection
             new EfConfigurationAssemblyProvider(typeof(DealConfiguration).Assembly));
 
         services.AddScoped<IDealRepository, DealRepository>();
+        services.AddScoped<IDealReturnRepository, DealReturnRepository>();
         services.AddScoped<IDealStageRepository, DealStageRepository>();
         services.AddScoped<IDealStageHistoryRepository, DealStageHistoryRepository>();
         services.AddScoped<IClientLookupService, ClientLookupService>();

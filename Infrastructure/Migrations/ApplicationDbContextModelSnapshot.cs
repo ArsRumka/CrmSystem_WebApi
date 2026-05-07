@@ -22,6 +22,162 @@ namespace Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Bonus.Domain.Entities.BonusAccount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Balance")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)");
+
+                    b.Property<Guid>("ClientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("OrganizationId", "ClientId")
+                        .IsUnique();
+
+                    b.HasIndex("OrganizationId", "IsActive");
+
+                    b.ToTable("BonusAccounts", (string)null);
+                });
+
+            modelBuilder.Entity("Bonus.Domain.Entities.BonusSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AccrualType")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("AccrualValue")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)");
+
+                    b.Property<bool>("AccrueOnBonusPayment")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal>("MaxPaymentPercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("PointValue")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganizationId")
+                        .IsUnique();
+
+                    b.ToTable("BonusSettings", (string)null);
+                });
+
+            modelBuilder.Entity("Bonus.Domain.Entities.BonusTransaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("BalanceAfter")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)");
+
+                    b.Property<decimal>("BalanceBefore")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)");
+
+                    b.Property<Guid>("BonusAccountId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ClientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("DealId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("MonetaryAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("PointValueAtMoment")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<decimal>("Points")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid?>("SourceReturnId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BonusAccountId");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("OrganizationId", "BonusAccountId");
+
+                    b.HasIndex("OrganizationId", "ClientId");
+
+                    b.HasIndex("OrganizationId", "CreatedAt");
+
+                    b.HasIndex("OrganizationId", "DealId");
+
+                    b.HasIndex("OrganizationId", "Type");
+
+                    b.HasIndex("OrganizationId", "DealId", "SourceReturnId", "Type");
+
+                    b.ToTable("BonusTransactions", (string)null);
+                });
+
             modelBuilder.Entity("Catalog.Domain.Entities.Category", b =>
                 {
                     b.Property<Guid>("Id")
@@ -296,8 +452,8 @@ namespace Infrastructure.Migrations
                         .HasColumnType("numeric(18,2)");
 
                     b.Property<decimal>("BonusPointsUsed")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)");
 
                     b.Property<Guid>("ClientId")
                         .HasColumnType("uuid");
@@ -424,6 +580,141 @@ namespace Infrastructure.Migrations
                     b.HasIndex("OrganizationId", "ItemType", "ItemId");
 
                     b.ToTable("DealItems", (string)null);
+                });
+
+            modelBuilder.Entity("Deals.Domain.Entities.DealReturn", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("BonusAccrualReversed")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)");
+
+                    b.Property<decimal>("BonusPointsReturned")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)");
+
+                    b.Property<string>("CancellationReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CancelledByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CompletedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("DealId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("MoneyAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DealId");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("OrganizationId", "CreatedAt");
+
+                    b.HasIndex("OrganizationId", "DealId");
+
+                    b.HasIndex("OrganizationId", "Status");
+
+                    b.ToTable("DealReturns", (string)null);
+                });
+
+            modelBuilder.Entity("Deals.Domain.Entities.DealReturnItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("DealId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("DealItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("DealReturnId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ItemType")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("NameSnapshot")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<Guid>("OrganizationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)");
+
+                    b.Property<decimal>("ReturnAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<Guid?>("StorageId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DealItemId");
+
+                    b.HasIndex("DealReturnId");
+
+                    b.HasIndex("OrganizationId");
+
+                    b.HasIndex("OrganizationId", "DealId");
+
+                    b.HasIndex("OrganizationId", "DealItemId");
+
+                    b.HasIndex("OrganizationId", "DealReturnId");
+
+                    b.HasIndex("OrganizationId", "ItemId");
+
+                    b.ToTable("DealReturnItems", (string)null);
                 });
 
             modelBuilder.Entity("Deals.Domain.Entities.DealStage", b =>
@@ -966,6 +1257,9 @@ namespace Infrastructure.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
+                    b.Property<Guid?>("SourceReturnId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("StorageId")
                         .HasColumnType("uuid");
 
@@ -983,6 +1277,8 @@ namespace Infrastructure.Migrations
                     b.HasIndex("OrganizationId", "DealId");
 
                     b.HasIndex("OrganizationId", "ProductId");
+
+                    b.HasIndex("OrganizationId", "SourceReturnId");
 
                     b.HasIndex("OrganizationId", "StorageId");
 
@@ -1034,6 +1330,15 @@ namespace Infrastructure.Migrations
                     b.ToTable("Storages", (string)null);
                 });
 
+            modelBuilder.Entity("Bonus.Domain.Entities.BonusTransaction", b =>
+                {
+                    b.HasOne("Bonus.Domain.Entities.BonusAccount", null)
+                        .WithMany()
+                        .HasForeignKey("BonusAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Catalog.Domain.Entities.Category", b =>
                 {
                     b.HasOne("Catalog.Domain.Entities.Category", null)
@@ -1072,6 +1377,30 @@ namespace Infrastructure.Migrations
                     b.HasOne("Deals.Domain.Entities.Deal", null)
                         .WithMany("Items")
                         .HasForeignKey("DealId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Deals.Domain.Entities.DealReturn", b =>
+                {
+                    b.HasOne("Deals.Domain.Entities.Deal", null)
+                        .WithMany()
+                        .HasForeignKey("DealId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Deals.Domain.Entities.DealReturnItem", b =>
+                {
+                    b.HasOne("Deals.Domain.Entities.DealItem", null)
+                        .WithMany()
+                        .HasForeignKey("DealItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Deals.Domain.Entities.DealReturn", null)
+                        .WithMany("Items")
+                        .HasForeignKey("DealReturnId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -1199,6 +1528,11 @@ namespace Infrastructure.Migrations
                     b.Navigation("Items");
 
                     b.Navigation("StageHistory");
+                });
+
+            modelBuilder.Entity("Deals.Domain.Entities.DealReturn", b =>
+                {
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("Identity.Domain.Entities.Module", b =>
