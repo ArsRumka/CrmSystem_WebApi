@@ -319,7 +319,7 @@ Clients module intentionally does not include:
 - bonus accounts;
 - email confirmation for clients;
 - client mailing campaigns;
-- chat;
+- chat, который реализован отдельным `Chat` module через `ClientId`;
 - audit;
 - catalog;
 - client bonus balances;
@@ -327,4 +327,4 @@ Clients module intentionally does not include:
 - frontend UI;
 - RabbitMQ/Redis/GraphQL integrations.
 
-Those concerns belong to future modules or future iterations.
+Those concerns belong to separate modules or future iterations.

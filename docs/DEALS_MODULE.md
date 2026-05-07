@@ -628,7 +628,7 @@ Deals Core intentionally does not include:
 - payment refunds;
 - promo codes;
 - analytics;
-- chat;
+- chat, который реализован отдельным `Chat` module через `DealId`;
 - audit events.
 
 Returns Core реализован внутри Deals. Deals всё ещё не включает Audit events и не занимается payment refunds, invoices или supplier returns.

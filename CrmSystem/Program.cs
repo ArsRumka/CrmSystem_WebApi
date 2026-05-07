@@ -1,4 +1,9 @@
 using BuildingBlocks.Infrastructure.Persistence;
+using Chat.Application;
+using Chat.Infrastructure;
+using Chat.Presentation;
+using Chat.Presentation.Controllers;
+using Chat.Presentation.Hubs;
 using Bonus.Application;
 using Bonus.Infrastructure;
 using Bonus.Presentation.Controllers;
@@ -43,6 +48,7 @@ builder.Services.AddScoped<AppDbContext>(provider =>
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddIdentityApplication();
+builder.Services.AddChatApplication();
 builder.Services.AddBonusApplication();
 builder.Services.AddClientsApplication();
 builder.Services.AddCatalogApplication();
@@ -50,6 +56,8 @@ builder.Services.AddDealsApplication();
 builder.Services.AddWarehouseApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddIdentityInfrastructure();
+builder.Services.AddChatInfrastructure();
+builder.Services.AddChatPresentation();
 builder.Services.AddBonusInfrastructure();
 builder.Services.AddClientsInfrastructure();
 builder.Services.AddCatalogInfrastructure();
@@ -59,11 +67,14 @@ builder.Services.AddWarehouseInfrastructure();
 builder.Services
     .AddControllers()
     .AddApplicationPart(typeof(PublicIdentityController).Assembly)
+    .AddApplicationPart(typeof(ChatConversationsController).Assembly)
     .AddApplicationPart(typeof(BonusSettingsController).Assembly)
     .AddApplicationPart(typeof(ClientsController).Assembly)
     .AddApplicationPart(typeof(CategoriesController).Assembly)
     .AddApplicationPart(typeof(DealsController).Assembly)
     .AddApplicationPart(typeof(StoragesController).Assembly);
+
+builder.Services.AddSignalR();
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -80,6 +91,23 @@ builder.Services
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Secret)),
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromMinutes(1)
+        };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+
+                if (!string.IsNullOrEmpty(accessToken) &&
+                    path.StartsWithSegments("/hubs/chat"))
+                {
+                    context.Token = accessToken;
+                }
+
+                return Task.CompletedTask;
+            }
         };
     });
 
@@ -139,5 +167,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<ChatHub>("/hubs/chat");
 
 app.Run();

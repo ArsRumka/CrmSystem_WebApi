@@ -10,9 +10,10 @@
 6. Если задача связана с Deals, прочитать `docs/DEALS_MODULE.md`.
 7. Если задача связана с Warehouse, прочитать `docs/WAREHOUSE_MODULE.md`.
 8. Если задача связана с Bonus, прочитать `docs/BONUS_MODULE.md`.
-9. Если задача про дальнейшую разработку, прочитать `docs/DEVELOPMENT_PLAN.md`.
-10. Проверить `git status --short`.
-11. Быстро осмотреть затрагиваемые проекты и не делать предположений без чтения кода.
+9. Если задача связана с Chat или SignalR, прочитать `docs/CHAT_MODULE.md`.
+10. Если задача про дальнейшую разработку, прочитать `docs/DEVELOPMENT_PLAN.md`.
+11. Проверить `git status --short`.
+12. Быстро осмотреть затрагиваемые проекты и не делать предположений без чтения кода.
 
 ## Какие файлы читать в первую очередь
 
@@ -101,6 +102,23 @@ Returns inside Deals:
 - `Modules/Warehouse/Warehouse.Infrastructure/Services/WarehouseDealReturnService.cs`
 - `Modules/Bonus/Bonus.Infrastructure/Services/BonusDealReturnService.cs`
 - `Infrastructure/Migrations/20260507121737_AddDealsReturnsCore.cs`
+
+Chat:
+
+- `Modules/Chat/Chat.Domain/Entities`
+- `Modules/Chat/Chat.Domain/Enums`
+- `Modules/Chat/Chat.Application/Conversations`
+- `Modules/Chat/Chat.Application/Messages`
+- `Modules/Chat/Chat.Application/Participants`
+- `Modules/Chat/Chat.Application/ContactRequests`
+- `Modules/Chat/Chat.Application/Realtime`
+- `Modules/Chat/Chat.Application/Common`
+- `Modules/Chat/Chat.Infrastructure/Configurations`
+- `Modules/Chat/Chat.Infrastructure/Repositories`
+- `Modules/Chat/Chat.Infrastructure/Lookups`
+- `Modules/Chat/Chat.Presentation/Controllers`
+- `Modules/Chat/Chat.Presentation/Hubs/ChatHub.cs`
+- `Infrastructure/Migrations/20260507173218_AddChatCoreModule.cs`
 
 ## Как составлять план
 
@@ -193,6 +211,15 @@ Modules or root-level module projects
 - `docs/ARCHITECTURE.md`;
 - `docs/DATABASE_OVERVIEW.md`, если файл существует.
 
+Пример: Chat Core with SignalR обновляет:
+
+- `docs/CHAT_MODULE.md`;
+- `docs/DEVELOPMENT_PLAN.md`;
+- `docs/CODEX_CONTEXT.md`;
+- `docs/ARCHITECTURE.md`;
+- `docs/CODEX_WORKFLOW.md`;
+- `docs/DATABASE_OVERVIEW.md`, если файл существует.
+
 В документации обязательно фиксировать:
 
 - endpoints;
@@ -202,6 +229,16 @@ Modules or root-level module projects
 - важные бизнес-решения;
 - что модуль намеренно не включает;
 - результаты build/database verification, если они важны для дальнейшей работы.
+
+Если модуль использует SignalR, дополнительно фиксировать:
+
+- hub route;
+- hub methods;
+- realtime events;
+- groups, если они являются частью контракта;
+- JWT query token behavior;
+- permission checks in hub/application handlers;
+- REST fallback endpoints.
 
 ## Clients как реализованный пример
 

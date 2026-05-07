@@ -52,6 +52,10 @@ Solution: `CrmSystem.slnx`.
 - `Bonus.Application` - MediatR use cases, validators, DTO, repository/service abstractions Bonus.
 - `Bonus.Infrastructure` - EF configurations, repositories, Clients/Catalog/Deals lookup, Deals completion integration и Deals return integration Bonus.
 - `Bonus.Presentation` - thin API controllers Bonus.
+- `Chat.Domain` - доменная модель Chat.
+- `Chat.Application` - MediatR use cases, validators, DTO, repositories/lookups abstractions и application-level permission checks Chat.
+- `Chat.Infrastructure` - EF configurations, repositories и lookup services Chat.
+- `Chat.Presentation` - thin API controllers Chat и SignalR hub.
 - `CrmSystem` - ASP.NET Core Web API, точка входа приложения.
 
 ## Ключевые правила
@@ -70,6 +74,7 @@ Solution: `CrmSystem.slnx`.
 - EF ограничения описывать через Fluent API.
 - Между модулями использовать Guid ID, не жёсткие EF-навигации.
 - Все бизнес-данные должны быть tenant-scoped через `OrganizationId`.
+- Chat является особым случаем: inter-organization conversations связаны с двумя организациями, а доступ определяется explicit participant membership.
 - Identity уже реализован, не переписывать его без необходимости.
 
 ## Current status
@@ -83,11 +88,12 @@ Solution: `CrmSystem.slnx`.
 - **Warehouse Core** - implemented and tested.
 - **Bonus Core** - implemented.
 - **Returns Core inside Deals** - implemented.
+- **Chat Core with SignalR** - implemented.
 
 Готов фундамент проекта:
 
 - общий `ApplicationDbContext`;
-- миграции `InitialCreate`, `AddIdentityFoundation`, `AddClientsModule`, `AddCatalogModule`, `AddDealsMvpModule`, `AddWarehouseCoreModule`, `20260506131632_AddBonusCoreModule`, `20260507121737_AddDealsReturnsCore`;
+- миграции `InitialCreate`, `AddIdentityFoundation`, `AddClientsModule`, `AddCatalogModule`, `AddDealsMvpModule`, `AddWarehouseCoreModule`, `20260506131632_AddBonusCoreModule`, `20260507121737_AddDealsReturnsCore`, `20260507173218_AddChatCoreModule`;
 - общий `IUnitOfWork`;
 - общие abstractions: current user, email sender, time provider;
 - common application exceptions;
@@ -307,6 +313,37 @@ Solution: `CrmSystem.slnx`.
 - return-origin операции считаются по `DealId`, `SourceReturnId != null` и `Type = Refund / CorrectionDecrease`;
 - `AccrueOnBonusPayment` управляет начислением, если сделка использовала бонусы.
 
+### Chat Core with SignalR
+
+Реализован коммуникационный модуль **Chat Core with SignalR**:
+
+- проекты `Chat.Domain`, `Chat.Application`, `Chat.Infrastructure`, `Chat.Presentation`;
+- сущности `ChatConversation`, `ChatConversationOrganization`, `ChatParticipant`, `ChatMessage`, `ChatContactRequest`;
+- enums `ChatConversationType` и `ChatContactRequestStatus`;
+- direct/group chats внутри организации;
+- чаты, связанные с `ClientId`;
+- чаты, связанные с `DealId`;
+- межорганизационные чаты через contact request;
+- REST endpoints для conversations, messages, participants и contact requests;
+- REST fallback отправки сообщений;
+- SignalR hub `/hubs/chat`;
+- realtime events `MessageReceived`, `MessageEdited`, `MessageDeleted`, `ConversationRead`, `UserTyping`, `ParticipantAdded`, `ParticipantRemoved`, `ContactRequestReceived`;
+- permissions через существующую Identity permission system;
+- migration `20260507173218_AddChatCoreModule` в `Infrastructure/Migrations`.
+
+Важные правила Chat:
+
+- используется общий `ApplicationDbContext`;
+- `ChatDbContext` не создавался;
+- Chat EF configurations подключены через `IEfConfigurationAssemblyProvider`;
+- внешних FK/navigation на Identity User, Identity Organization, Clients и Deals нет;
+- связи с другими модулями только через Guid;
+- inter-org chat ограничен двумя организациями;
+- inter-org chat создаётся только через approved contact request;
+- inter-org conversation видят только explicit participants, а не все сотрудники организации;
+- message хранит `SenderOrganizationId` и `SenderUserId`;
+- JWT `access_token` из query string принимается только для `/hubs/chat`.
+
 ## Seeded module codes
 
 Коды CRM-модулей seed-ятся как системные `Module` для прав доступа:
@@ -322,7 +359,7 @@ Solution: `CrmSystem.slnx`.
 - `Audit`
 - `Settings`
 
-`Clients`, `Catalog`, `Deals`, `Warehouse` и `Bonus` уже реализованы как бизнес-модули или MVP/Core-модули. `Deals` реализован как MVP/Core с Returns Core inside Deals. `Warehouse` и `Bonus` реализованы как Core и поддерживают return integration через `SourceReturnId`. `Chat` и `Audit` пока являются permission module codes или future modules.
+`Clients`, `Catalog`, `Deals`, `Warehouse`, `Bonus` и `Chat` уже реализованы как бизнес-модули или MVP/Core-модули. `Deals` реализован как MVP/Core с Returns Core inside Deals. `Warehouse` и `Bonus` реализованы как Core и поддерживают return integration через `SourceReturnId`. `Chat` реализован как Core with SignalR. `Audit` пока является permission module code для будущей бизнес-функции.
 
 ## Endpoints
 
@@ -429,6 +466,31 @@ Authorized organization user Bonus:
 - `GET /api/bonus/transactions`
 - `GET /api/bonus/transactions/{id}`
 
+Authorized organization user Chat:
+
+- `GET /api/chat/conversations`
+- `GET /api/chat/conversations/{id}`
+- `POST /api/chat/conversations`
+- `PUT /api/chat/conversations/{id}`
+- `DELETE /api/chat/conversations/{id}`
+- `GET /api/chat/conversations/{id}/messages`
+- `POST /api/chat/conversations/{id}/messages`
+- `POST /api/chat/conversations/{id}/read`
+- `POST /api/chat/conversations/{id}/participants`
+- `DELETE /api/chat/conversations/{id}/participants/{userId}`
+- `PUT /api/chat/messages/{id}`
+- `DELETE /api/chat/messages/{id}`
+- `POST /api/chat/contact-requests`
+- `GET /api/chat/contact-requests/incoming`
+- `GET /api/chat/contact-requests/outgoing`
+- `POST /api/chat/contact-requests/{id}/approve`
+- `POST /api/chat/contact-requests/{id}/reject`
+- `POST /api/chat/contact-requests/{id}/cancel`
+
+SignalR Chat:
+
+- `/hubs/chat`
+
 Clients permissions:
 
 - `Clients / Read`
@@ -462,7 +524,14 @@ Bonus permissions:
 - `Bonus / Read`
 - `Bonus / Update`
 
-Важно: JWT системного администратора подходит для system-admin endpoints. Он не является пользователем организации и не должен открывать organization endpoints, включая Clients, Catalog, Deals, Warehouse и Bonus.
+Chat permissions:
+
+- `Chat / Read`
+- `Chat / Create`
+- `Chat / Update`
+- `Chat / Delete`
+
+Важно: JWT системного администратора подходит для system-admin endpoints. Он не является пользователем организации и не должен открывать organization endpoints, включая Clients, Catalog, Deals, Warehouse, Bonus и Chat.
 
 ## Текущие настройки WebApi
 
@@ -470,6 +539,7 @@ Bonus permissions:
 
 - `ApplicationDbContext` через Npgsql;
 - `AddIdentityApplication()`;
+- `AddChatApplication()`;
 - `AddBonusApplication()`;
 - `AddClientsApplication()`;
 - `AddCatalogApplication()`;
@@ -477,18 +547,24 @@ Bonus permissions:
 - `AddWarehouseApplication()`;
 - `AddInfrastructure(builder.Configuration)`;
 - `AddIdentityInfrastructure()`;
+- `AddChatInfrastructure()`;
+- `AddChatPresentation()`;
 - `AddBonusInfrastructure()`;
 - `AddClientsInfrastructure()`;
 - `AddCatalogInfrastructure()`;
 - `AddDealsInfrastructure()`;
 - `AddWarehouseInfrastructure()`;
 - controllers из `Identity.Presentation`;
+- controllers из `Chat.Presentation`;
 - controllers из `Bonus.Presentation`;
 - controllers из `Clients.Presentation`;
 - controllers из `Catalog.Presentation`;
 - controllers из `Deals.Presentation`;
 - controllers из `Warehouse.Presentation`;
+- SignalR через `AddSignalR()`;
+- ChatHub route `/hubs/chat`;
 - JWT Bearer authentication;
+- SignalR JWT query token support: `access_token` читается только для path `/hubs/chat`;
 - authorization policy `RequireSystemAdmin`;
 - dynamic permission policies вида `Permission:{ModuleCode}:{Action}`;
 - Swagger Bearer;
@@ -496,11 +572,11 @@ Bonus permissions:
 
 ## Следующий модуль
 
-После Returns Core следующий рекомендуемый модуль - **Chat Core with SignalR**.
+После Chat Core with SignalR следующий рекомендуемый модуль - **Email Campaigns Core**.
 
-Почему Chat связан с текущим состоянием проекта:
+Почему Email Campaigns связан с текущим состоянием проекта:
 
 - Deals уже покрывает lifecycle sale -> warehouse deduction -> bonus write-off/accrual -> return -> warehouse return -> bonus refund/reversal;
-- Chat добавит коммуникационный слой CRM без изменения core business flow;
-- Email Campaigns логично делать после Chat;
-- Audit лучше делать после Chat/Email или параллельно, чтобы логировать основные бизнес-события и коммуникации.
+- Chat уже добавил коммуникационный слой CRM без изменения core business flow;
+- Email Campaigns логично расширит коммуникации от диалогов к клиентским рассылкам;
+- Audit лучше делать после Email Campaigns, чтобы логировать основные бизнес-события и действия коммуникационных модулей.

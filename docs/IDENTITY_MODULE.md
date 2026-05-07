@@ -439,7 +439,7 @@ Seeded modules:
 - `Audit`
 - `Settings`
 
-`Clients`, `Catalog`, `Deals`, `Warehouse` и `Bonus` уже реализованы как отдельные CRM-модули или MVP/Core-модули. `Chat` и `Audit` пока являются seeded module codes для будущих бизнес-функций.
+`Clients`, `Catalog`, `Deals`, `Warehouse`, `Bonus` и `Chat` уже реализованы как отдельные CRM-модули или MVP/Core-модули. `Chat` использует seeded module code `Chat` для REST permissions и application-level checks в SignalR hub. `Audit` пока является seeded module code для будущей бизнес-функции.
 
 ## Как тестировать через Swagger
 

@@ -338,7 +338,7 @@ Catalog module намеренно не реализует:
 - organization bonus settings;
 - organization discount settings;
 - stock/warehouse logic inside Catalog;
-- Chat;
+- Chat, который реализован отдельным `Chat` module;
 - Audit;
 - полноценный Promotions module;
 - promo codes;
@@ -352,7 +352,8 @@ Catalog module намеренно не реализует:
 - `Deals MVP/Core`;
 - `Warehouse Core`;
 - `Bonus Core`;
-- `Returns Core inside Deals`.
+- `Returns Core inside Deals`;
+- `Chat Core with SignalR`.
 
 Связи:
 

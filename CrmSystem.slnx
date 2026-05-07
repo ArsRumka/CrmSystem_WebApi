@@ -26,6 +26,13 @@
     <Project Path="Modules/Bonus/Bonus.Presentation/Bonus.Presentation.csproj" />
   </Folder>
 
+  <Folder Name="/Modules/Chat/">
+    <Project Path="Modules/Chat/Chat.Application/Chat.Application.csproj" />
+    <Project Path="Modules/Chat/Chat.Domain/Chat.Domain.csproj" />
+    <Project Path="Modules/Chat/Chat.Infrastructure/Chat.Infrastructure.csproj" />
+    <Project Path="Modules/Chat/Chat.Presentation/Chat.Presentation.csproj" />
+  </Folder>
+
   <Folder Name="/Modules/Deals/">
     <Project Path="Modules/Deals/Deals.Application/Deals.Application.csproj" />
     <Project Path="Modules/Deals/Deals.Domain/Deals.Domain.csproj" />
