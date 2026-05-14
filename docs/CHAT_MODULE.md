@@ -386,3 +386,5 @@ Migration:
 - email notifications;
 - audit integration;
 - frontend UI.
+
+Email Campaigns Core уже реализован отдельным `Email` module. Email notifications по-прежнему не входят в Chat Core.

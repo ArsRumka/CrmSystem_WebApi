@@ -56,6 +56,10 @@ Solution: `CrmSystem.slnx`.
 - `Chat.Application` - MediatR use cases, validators, DTO, repositories/lookups abstractions и application-level permission checks Chat.
 - `Chat.Infrastructure` - EF configurations, repositories и lookup services Chat.
 - `Chat.Presentation` - thin API controllers Chat и SignalR hub.
+- `Email.Domain` - доменная модель Email Campaigns.
+- `Email.Application` - MediatR use cases, validators, DTO, repository/service abstractions Email.
+- `Email.Infrastructure` - EF configurations, repositories, SMTP sender, Data Protection password protector, lookup services и hosted automation Email.
+- `Email.Presentation` - thin API controllers Email.
 - `CrmSystem` - ASP.NET Core Web API, точка входа приложения.
 
 ## Ключевые правила
@@ -75,6 +79,7 @@ Solution: `CrmSystem.slnx`.
 - Между модулями использовать Guid ID, не жёсткие EF-навигации.
 - Все бизнес-данные должны быть tenant-scoped через `OrganizationId`.
 - Chat является особым случаем: inter-organization conversations связаны с двумя организациями, а доступ определяется explicit participant membership.
+- Email Campaigns использует organization SMTP settings, хранит SMTP password encrypted и не создаёт внешних FK/navigation на Identity, Clients или Deals.
 - Identity уже реализован, не переписывать его без необходимости.
 
 ## Current status
@@ -89,11 +94,12 @@ Solution: `CrmSystem.slnx`.
 - **Bonus Core** - implemented.
 - **Returns Core inside Deals** - implemented.
 - **Chat Core with SignalR** - implemented.
+- **Email Campaigns Core** - implemented.
 
 Готов фундамент проекта:
 
 - общий `ApplicationDbContext`;
-- миграции `InitialCreate`, `AddIdentityFoundation`, `AddClientsModule`, `AddCatalogModule`, `AddDealsMvpModule`, `AddWarehouseCoreModule`, `20260506131632_AddBonusCoreModule`, `20260507121737_AddDealsReturnsCore`, `20260507173218_AddChatCoreModule`;
+- миграции `InitialCreate`, `AddIdentityFoundation`, `AddClientsModule`, `AddCatalogModule`, `AddDealsMvpModule`, `AddWarehouseCoreModule`, `20260506131632_AddBonusCoreModule`, `20260507121737_AddDealsReturnsCore`, `20260507173218_AddChatCoreModule`, `20260514140401_AddEmailCampaignsCoreModule`;
 - общий `IUnitOfWork`;
 - общие abstractions: current user, email sender, time provider;
 - common application exceptions;
@@ -344,6 +350,36 @@ Solution: `CrmSystem.slnx`.
 - message хранит `SenderOrganizationId` и `SenderUserId`;
 - JWT `access_token` из query string принимается только для `/hubs/chat`.
 
+### Email Campaigns Core
+
+Реализован модуль **Email Campaigns Core** после Chat Core with SignalR:
+
+- проекты `Email.Domain`, `Email.Application`, `Email.Infrastructure`, `Email.Presentation`;
+- сущности `EmailSettings`, `EmailTemplate`, `EmailCampaign`, `EmailCampaignRecipient`, `EmailAutomationRule`;
+- enums `EmailCampaignType`, `EmailCampaignStatus`, `EmailRecipientStatus`;
+- SMTP-настройки для каждой организации;
+- реальная SMTP-отправка через настройки организации;
+- Data Protection encryption для SMTP password;
+- test endpoint для проверки SMTP-настроек;
+- шаблоны писем с placeholders;
+- ручные email-рассылки по выбранным клиентам;
+- автоматическая рассылка inactive clients через hosted service и run-now endpoint;
+- история recipients и статусы `Sent`, `Failed`, `SkippedNoEmail`, `SkippedRecentlySent`, `SkippedMarketingDisabled`;
+- соблюдение `Client.AllowMarketingEmails`;
+- migration `20260514140401_AddEmailCampaignsCoreModule` в `Infrastructure/Migrations`.
+
+Важные правила Email:
+
+- используется общий `ApplicationDbContext`;
+- `EmailDbContext` не создавался;
+- Email EF configurations подключены через `IEfConfigurationAssemblyProvider`;
+- внешних FK/navigation на Identity User, Identity Organization, Clients и Deals нет;
+- связи с другими модулями только через Guid;
+- campaigns используют только organization SMTP settings, глобальный `IEmailSender` не используется для campaign sending;
+- `PasswordEncrypted` не возвращается из API;
+- automatic emails требуют хотя бы одну successful final deal;
+- `InactivityDays` и `RepeatAfterDays` являются настройками организации.
+
 ## Seeded module codes
 
 Коды CRM-модулей seed-ятся как системные `Module` для прав доступа:
@@ -356,10 +392,13 @@ Solution: `CrmSystem.slnx`.
 - `Bonus`
 - `Warehouse`
 - `Chat`
+- `Email`
 - `Audit`
 - `Settings`
 
-`Clients`, `Catalog`, `Deals`, `Warehouse`, `Bonus` и `Chat` уже реализованы как бизнес-модули или MVP/Core-модули. `Deals` реализован как MVP/Core с Returns Core inside Deals. `Warehouse` и `Bonus` реализованы как Core и поддерживают return integration через `SourceReturnId`. `Chat` реализован как Core with SignalR. `Audit` пока является permission module code для будущей бизнес-функции.
+`Clients`, `Catalog`, `Deals`, `Warehouse`, `Bonus`, `Chat` и `Email` уже реализованы как бизнес-модули или MVP/Core-модули. `Deals` реализован как MVP/Core с Returns Core inside Deals. `Warehouse` и `Bonus` реализованы как Core и поддерживают return integration через `SourceReturnId`. `Chat` реализован как Core with SignalR. `Email` реализован как Core module для SMTP-настроек, шаблонов, ручных и автоматических рассылок. `Audit` пока является permission module code для будущей бизнес-функции.
+
+Для существующих tenant `Admin` ролей Identity seed idempotently backfill-ит полный доступ к module code `Email`. Обычным ролям Email permissions автоматически не выдаются.
 
 ## Endpoints
 
@@ -491,6 +530,25 @@ SignalR Chat:
 
 - `/hubs/chat`
 
+Authorized organization user Email:
+
+- `GET /api/email/settings`
+- `PUT /api/email/settings`
+- `POST /api/email/settings/test`
+- `GET /api/email/templates`
+- `GET /api/email/templates/{id}`
+- `POST /api/email/templates`
+- `PUT /api/email/templates/{id}`
+- `DELETE /api/email/templates/{id}`
+- `GET /api/email/campaigns`
+- `GET /api/email/campaigns/{id}`
+- `GET /api/email/campaigns/{id}/recipients`
+- `POST /api/email/campaigns/manual`
+- `POST /api/email/campaigns/{id}/send`
+- `GET /api/email/automation`
+- `PUT /api/email/automation`
+- `POST /api/email/automation/run`
+
 Clients permissions:
 
 - `Clients / Read`
@@ -531,7 +589,14 @@ Chat permissions:
 - `Chat / Update`
 - `Chat / Delete`
 
-Важно: JWT системного администратора подходит для system-admin endpoints. Он не является пользователем организации и не должен открывать organization endpoints, включая Clients, Catalog, Deals, Warehouse, Bonus и Chat.
+Email permissions:
+
+- `Email / Read`
+- `Email / Create`
+- `Email / Update`
+- `Email / Delete`
+
+Важно: JWT системного администратора подходит для system-admin endpoints. Он не является пользователем организации и не должен открывать organization endpoints, включая Clients, Catalog, Deals, Warehouse, Bonus, Chat и Email.
 
 ## Текущие настройки WebApi
 
@@ -544,6 +609,7 @@ Chat permissions:
 - `AddClientsApplication()`;
 - `AddCatalogApplication()`;
 - `AddDealsApplication()`;
+- `AddEmailApplication()`;
 - `AddWarehouseApplication()`;
 - `AddInfrastructure(builder.Configuration)`;
 - `AddIdentityInfrastructure()`;
@@ -553,6 +619,7 @@ Chat permissions:
 - `AddClientsInfrastructure()`;
 - `AddCatalogInfrastructure()`;
 - `AddDealsInfrastructure()`;
+- `AddEmailInfrastructure(builder.Configuration)`;
 - `AddWarehouseInfrastructure()`;
 - controllers из `Identity.Presentation`;
 - controllers из `Chat.Presentation`;
@@ -560,6 +627,7 @@ Chat permissions:
 - controllers из `Clients.Presentation`;
 - controllers из `Catalog.Presentation`;
 - controllers из `Deals.Presentation`;
+- controllers из `Email.Presentation`;
 - controllers из `Warehouse.Presentation`;
 - SignalR через `AddSignalR()`;
 - ChatHub route `/hubs/chat`;
@@ -572,11 +640,20 @@ Chat permissions:
 
 ## Следующий модуль
 
-После Chat Core with SignalR следующий рекомендуемый модуль - **Email Campaigns Core**.
+После Email Campaigns Core следующий рекомендуемый backend module - **Audit Core**.
 
-Почему Email Campaigns связан с текущим состоянием проекта:
+Почему Audit следующий:
 
 - Deals уже покрывает lifecycle sale -> warehouse deduction -> bonus write-off/accrual -> return -> warehouse return -> bonus refund/reversal;
-- Chat уже добавил коммуникационный слой CRM без изменения core business flow;
-- Email Campaigns логично расширит коммуникации от диалогов к клиентским рассылкам;
-- Audit лучше делать после Email Campaigns, чтобы логировать основные бизнес-события и действия коммуникационных модулей.
+- Chat и Email уже закрывают базовый коммуникационный слой CRM;
+- Audit должен фиксировать ключевые действия business modules и коммуникационных модулей;
+- после Audit логично добавить API integration tests как отдельный Testing Layer.
+
+Дальнейший roadmap:
+
+- Audit Core;
+- API integration tests;
+- minimal React frontend;
+- Dockerization;
+- Nginx reverse proxy;
+- final project documentation and diploma write-up.

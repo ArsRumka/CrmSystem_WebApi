@@ -37,6 +37,10 @@
     <ProjectReference Include="..\Modules\Deals\Deals.Application\Deals.Application.csproj" />
     <ProjectReference Include="..\Modules\Deals\Deals.Infrastructure\Deals.Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Deals\Deals.Presentation\Deals.Presentation.csproj" />
+    <ProjectReference Include="..\Modules\Email\Email.Application\Email.Application.csproj" />
+    <ProjectReference Include="..\Modules\Email\Email.Domain\Email.Domain.csproj" />
+    <ProjectReference Include="..\Modules\Email\Email.Infrastructure\Email.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Email\Email.Presentation\Email.Presentation.csproj" />
     <ProjectReference Include="..\Modules\Identity\Identity.Application\Identity.Application.csproj" />
     <ProjectReference Include="..\Modules\Identity\Identity.Infrastructure\Identity.Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Identity\Identity.Presentation\Identity.Presentation.csproj" />

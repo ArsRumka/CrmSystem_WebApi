@@ -11,9 +11,10 @@
 7. Если задача связана с Warehouse, прочитать `docs/WAREHOUSE_MODULE.md`.
 8. Если задача связана с Bonus, прочитать `docs/BONUS_MODULE.md`.
 9. Если задача связана с Chat или SignalR, прочитать `docs/CHAT_MODULE.md`.
-10. Если задача про дальнейшую разработку, прочитать `docs/DEVELOPMENT_PLAN.md`.
-11. Проверить `git status --short`.
-12. Быстро осмотреть затрагиваемые проекты и не делать предположений без чтения кода.
+10. Если задача связана с Email Campaigns, SMTP или рассылками, прочитать `docs/EMAIL_MODULE.md`.
+11. Если задача про дальнейшую разработку, прочитать `docs/DEVELOPMENT_PLAN.md`.
+12. Проверить `git status --short`.
+13. Быстро осмотреть затрагиваемые проекты и не делать предположений без чтения кода.
 
 ## Какие файлы читать в первую очередь
 
@@ -120,6 +121,21 @@ Chat:
 - `Modules/Chat/Chat.Presentation/Hubs/ChatHub.cs`
 - `Infrastructure/Migrations/20260507173218_AddChatCoreModule.cs`
 
+Email:
+
+- `Modules/Email/Email.Domain/Entities`
+- `Modules/Email/Email.Domain/Enums`
+- `Modules/Email/Email.Application/Settings`
+- `Modules/Email/Email.Application/Templates`
+- `Modules/Email/Email.Application/Campaigns`
+- `Modules/Email/Email.Application/Automation`
+- `Modules/Email/Email.Application/Abstractions`
+- `Modules/Email/Email.Infrastructure/Configurations`
+- `Modules/Email/Email.Infrastructure/Repositories`
+- `Modules/Email/Email.Infrastructure/Services`
+- `Modules/Email/Email.Presentation/Controllers`
+- `Infrastructure/Migrations/20260514140401_AddEmailCampaignsCoreModule.cs`
+
 ## Как составлять план
 
 Перед изменениями:
@@ -220,6 +236,16 @@ Modules or root-level module projects
 - `docs/CODEX_WORKFLOW.md`;
 - `docs/DATABASE_OVERVIEW.md`, если файл существует.
 
+Пример: Email Campaigns Core обновляет:
+
+- `docs/EMAIL_MODULE.md`;
+- `docs/DEVELOPMENT_PLAN.md`;
+- `docs/CODEX_CONTEXT.md`;
+- `docs/ARCHITECTURE.md`;
+- `docs/CODEX_WORKFLOW.md`;
+- `docs/CHAT_MODULE.md`, если там есть roadmap после Chat или email notifications notes;
+- `docs/DATABASE_OVERVIEW.md`, если файл существует.
+
 В документации обязательно фиксировать:
 
 - endpoints;
@@ -239,6 +265,19 @@ Modules or root-level module projects
 - JWT query token behavior;
 - permission checks in hub/application handlers;
 - REST fallback endpoints.
+
+Если модуль использует `HostedService` или внешние side effects, дополнительно фиксировать:
+
+- appsettings options;
+- external side effects;
+- failure behavior;
+- security handling for credentials;
+- test strategy.
+
+Deployment tasks:
+
+- Docker/Nginx изменения должны идти отдельной итерацией;
+- не смешивать deployment changes с business module changes.
 
 ## Clients как реализованный пример
 

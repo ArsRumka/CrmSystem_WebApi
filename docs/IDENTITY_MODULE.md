@@ -436,10 +436,13 @@ Seeded modules:
 - `Bonus`
 - `Warehouse`
 - `Chat`
+- `Email`
 - `Audit`
 - `Settings`
 
-`Clients`, `Catalog`, `Deals`, `Warehouse`, `Bonus` и `Chat` уже реализованы как отдельные CRM-модули или MVP/Core-модули. `Chat` использует seeded module code `Chat` для REST permissions и application-level checks в SignalR hub. `Audit` пока является seeded module code для будущей бизнес-функции.
+`Clients`, `Catalog`, `Deals`, `Warehouse`, `Bonus`, `Chat` и `Email` уже реализованы как отдельные CRM-модули или MVP/Core-модули. `Chat` использует seeded module code `Chat` для REST permissions и application-level checks в SignalR hub. `Email` использует seeded module code `Email` для settings, templates, campaigns и automation endpoints. `Audit` пока является seeded module code для будущей бизнес-функции.
+
+Identity seed idempotently backfill-ит полный доступ к `Email` для существующих tenant ролей `Admin`. Обычным ролям Email permissions автоматически не выдаются.
 
 ## Как тестировать через Swagger
 

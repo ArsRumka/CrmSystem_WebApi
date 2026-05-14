@@ -97,6 +97,7 @@ Enums хранятся в БД как `int`.
 - Дубликаты клиентов не блокируются на уровне БД.
 - Дубликаты должны обрабатываться будущей логикой поиска/предупреждений, если она понадобится.
 - `Email` или `Phone` обязательны при create/update.
+- `AllowMarketingEmails=false` используется Email Campaigns Core: такие клиенты попадают в recipient history со статусом `SkippedMarketingDisabled` и не получают campaign email.
 - `FullName` вычисляется как `LastName + FirstName + MiddleName`, если `MiddleName` указан.
 - `DELETE` не удаляет строку из БД, а деактивирует клиента.
 - Domain не использует EF/DataAnnotations attributes.
@@ -318,7 +319,7 @@ Clients module intentionally does not include:
 - deals;
 - bonus accounts;
 - email confirmation for clients;
-- client mailing campaigns;
+- client mailing campaigns, которые реализованы отдельным `Email` module;
 - chat, который реализован отдельным `Chat` module через `ClientId`;
 - audit;
 - catalog;

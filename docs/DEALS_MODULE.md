@@ -40,6 +40,8 @@ Returns - не отдельный модуль. Это расширение Deal
 
 После Returns Core будущей Deals-related итерацией остаётся Audit.
 
+Email Campaigns Core использует Deals read model для inactive-client automation: клиент считается кандидатом только при наличии хотя бы одной active deal в successful final stage с `ClosedAt`, и latest successful final deal должна быть старше настроенного `InactivityDays`. Внешних FK/navigation между Email и Deals нет.
+
 ## 2. Проекты модуля
 
 Модуль состоит из четырёх проектов:

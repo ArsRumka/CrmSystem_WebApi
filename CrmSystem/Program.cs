@@ -17,6 +17,9 @@ using CrmSystem.Middleware;
 using Deals.Application;
 using Deals.Infrastructure;
 using Deals.Presentation.Controllers;
+using Email.Application;
+using Email.Infrastructure;
+using Email.Presentation.Controllers;
 using Identity.Application;
 using Identity.Infrastructure;
 using Identity.Infrastructure.Security;
@@ -53,6 +56,7 @@ builder.Services.AddBonusApplication();
 builder.Services.AddClientsApplication();
 builder.Services.AddCatalogApplication();
 builder.Services.AddDealsApplication();
+builder.Services.AddEmailApplication();
 builder.Services.AddWarehouseApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddIdentityInfrastructure();
@@ -62,6 +66,7 @@ builder.Services.AddBonusInfrastructure();
 builder.Services.AddClientsInfrastructure();
 builder.Services.AddCatalogInfrastructure();
 builder.Services.AddDealsInfrastructure();
+builder.Services.AddEmailInfrastructure(builder.Configuration);
 builder.Services.AddWarehouseInfrastructure();
 
 builder.Services
@@ -72,6 +77,7 @@ builder.Services
     .AddApplicationPart(typeof(ClientsController).Assembly)
     .AddApplicationPart(typeof(CategoriesController).Assembly)
     .AddApplicationPart(typeof(DealsController).Assembly)
+    .AddApplicationPart(typeof(EmailSettingsController).Assembly)
     .AddApplicationPart(typeof(StoragesController).Assembly);
 
 builder.Services.AddSignalR();
