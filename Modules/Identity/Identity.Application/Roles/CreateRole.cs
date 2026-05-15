@@ -1,3 +1,5 @@
+using Audit.Application.Abstractions.Services;
+using Audit.Domain.Enums;
 using BuildingBlocks.Application.Abstractions.Auth;
 using BuildingBlocks.Application.Abstractions.Persistence;
 using BuildingBlocks.Application.Exceptions;
@@ -50,6 +52,7 @@ public sealed class CreateRoleCommandHandler : IRequestHandler<CreateRoleCommand
     private readonly IRoleRepository _roleRepository;
     private readonly IModuleRepository _moduleRepository;
     private readonly IModuleRoleRepository _moduleRoleRepository;
+    private readonly IAuditLogService _auditLogService;
     private readonly IUnitOfWork _unitOfWork;
 
     public CreateRoleCommandHandler(
@@ -58,6 +61,7 @@ public sealed class CreateRoleCommandHandler : IRequestHandler<CreateRoleCommand
         IRoleRepository roleRepository,
         IModuleRepository moduleRepository,
         IModuleRoleRepository moduleRoleRepository,
+        IAuditLogService auditLogService,
         IUnitOfWork unitOfWork)
     {
         _currentUserService = currentUserService;
@@ -65,6 +69,7 @@ public sealed class CreateRoleCommandHandler : IRequestHandler<CreateRoleCommand
         _roleRepository = roleRepository;
         _moduleRepository = moduleRepository;
         _moduleRoleRepository = moduleRoleRepository;
+        _auditLogService = auditLogService;
         _unitOfWork = unitOfWork;
     }
 
@@ -115,6 +120,18 @@ public sealed class CreateRoleCommandHandler : IRequestHandler<CreateRoleCommand
 
         await _roleRepository.AddAsync(role, cancellationToken);
         await _moduleRoleRepository.AddRangeAsync(moduleRoles, cancellationToken);
+        await _auditLogService.LogAsync(
+            organizationId,
+            currentUserId,
+            "Roles",
+            AuditAction.Create,
+            "Role",
+            role.Id,
+            $"Role {role.Name} was created",
+            oldValues: null,
+            newValues: IdentityAuditSnapshots.Role(role, responsePermissions),
+            cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new RoleResponse(role.Id, role.OrganizationId, role.Name, responsePermissions);

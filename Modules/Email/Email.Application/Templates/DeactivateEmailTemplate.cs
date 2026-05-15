@@ -1,3 +1,5 @@
+using Audit.Application.Abstractions.Services;
+using Audit.Domain.Enums;
 using BuildingBlocks.Application.Abstractions.Auth;
 using BuildingBlocks.Application.Abstractions.Persistence;
 using BuildingBlocks.Application.Abstractions.Time;
@@ -23,17 +25,20 @@ public sealed class DeactivateEmailTemplateCommandHandler : IRequestHandler<Deac
 {
     private readonly ICurrentUserService _currentUserService;
     private readonly IEmailTemplateRepository _templateRepository;
+    private readonly IAuditLogService _auditLogService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
 
     public DeactivateEmailTemplateCommandHandler(
         ICurrentUserService currentUserService,
         IEmailTemplateRepository templateRepository,
+        IAuditLogService auditLogService,
         IDateTimeProvider dateTimeProvider,
         IUnitOfWork unitOfWork)
     {
         _currentUserService = currentUserService;
         _templateRepository = templateRepository;
+        _auditLogService = auditLogService;
         _dateTimeProvider = dateTimeProvider;
         _unitOfWork = unitOfWork;
     }
@@ -45,7 +50,21 @@ public sealed class DeactivateEmailTemplateCommandHandler : IRequestHandler<Deac
         var template = await _templateRepository.GetByIdAsync(organizationId, request.Id, cancellationToken)
             ?? throw new NotFoundException("Email template was not found");
 
+        var oldSnapshot = EmailAuditSnapshots.Template(template);
+
         template.Deactivate(_dateTimeProvider.UtcNow, userId);
+        await _auditLogService.LogAsync(
+            organizationId,
+            userId,
+            "Email",
+            AuditAction.Deactivate,
+            "EmailTemplate",
+            template.Id,
+            $"Email template {template.Name} was deactivated",
+            oldSnapshot,
+            EmailAuditSnapshots.Template(template),
+            cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }

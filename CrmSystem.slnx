@@ -12,6 +12,13 @@
     <Project Path="Modules/Clients/Clients.Presentation/Clients.Presentation.csproj" />
   </Folder>
 
+  <Folder Name="/Modules/Audit/">
+    <Project Path="Modules/Audit/Audit.Application/Audit.Application.csproj" />
+    <Project Path="Modules/Audit/Audit.Domain/Audit.Domain.csproj" />
+    <Project Path="Modules/Audit/Audit.Infrastructure/Audit.Infrastructure.csproj" />
+    <Project Path="Modules/Audit/Audit.Presentation/Audit.Presentation.csproj" />
+  </Folder>
+
   <Folder Name="/Modules/Catalog/">
     <Project Path="Modules/Catalog/Catalog.Application/Catalog.Application.csproj" />
     <Project Path="Modules/Catalog/Catalog.Domain/Catalog.Domain.csproj" />
@@ -59,6 +66,10 @@
     <Project Path="Modules/Warehouse/Warehouse.Domain/Warehouse.Domain.csproj" />
     <Project Path="Modules/Warehouse/Warehouse.Infrastructure/Warehouse.Infrastructure.csproj" />
     <Project Path="Modules/Warehouse/Warehouse.Presentation/Warehouse.Presentation.csproj" />
+  </Folder>
+
+  <Folder Name="/tests/">
+    <Project Path="tests/CrmSystem.ApiTests/CrmSystem.ApiTests.csproj" />
   </Folder>
 
   <Project Path="CrmSystem/CrmSystem.csproj" />

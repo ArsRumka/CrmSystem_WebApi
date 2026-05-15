@@ -1,3 +1,5 @@
+using Audit.Application.Abstractions.Services;
+using Audit.Domain.Enums;
 using BuildingBlocks.Application.Abstractions.Auth;
 using BuildingBlocks.Application.Abstractions.Persistence;
 using BuildingBlocks.Application.Abstractions.Time;
@@ -49,6 +51,7 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
     private readonly ICurrentUserService _currentUserService;
     private readonly ICategoryRepository _categoryRepository;
     private readonly IProductRepository _productRepository;
+    private readonly IAuditLogService _auditLogService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -56,12 +59,14 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
         ICurrentUserService currentUserService,
         ICategoryRepository categoryRepository,
         IProductRepository productRepository,
+        IAuditLogService auditLogService,
         IDateTimeProvider dateTimeProvider,
         IUnitOfWork unitOfWork)
     {
         _currentUserService = currentUserService;
         _categoryRepository = categoryRepository;
         _productRepository = productRepository;
+        _auditLogService = auditLogService;
         _dateTimeProvider = dateTimeProvider;
         _unitOfWork = unitOfWork;
     }
@@ -79,6 +84,19 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
             throw new NotFoundException("Category was not found");
         }
 
+        var oldValues = new
+        {
+            product.Name,
+            product.CategoryId,
+            product.Sku,
+            product.Price,
+            product.BonusType,
+            product.BonusValue,
+            product.DiscountType,
+            product.DiscountValue,
+            product.IsActive
+        };
+
         product.Update(
             request.CategoryId,
             request.Name,
@@ -90,6 +108,29 @@ public sealed class UpdateProductCommandHandler : IRequestHandler<UpdateProductC
             request.DiscountType,
             request.DiscountValue,
             _dateTimeProvider.UtcNow);
+
+        await _auditLogService.LogAsync(
+            organizationId,
+            _currentUserService.UserId,
+            "Catalog",
+            AuditAction.Update,
+            "Product",
+            product.Id,
+            $"Product {product.Name} was updated",
+            oldValues,
+            newValues: new
+            {
+                product.Name,
+                product.CategoryId,
+                product.Sku,
+                product.Price,
+                product.BonusType,
+                product.BonusValue,
+                product.DiscountType,
+                product.DiscountValue,
+                product.IsActive
+            },
+            cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

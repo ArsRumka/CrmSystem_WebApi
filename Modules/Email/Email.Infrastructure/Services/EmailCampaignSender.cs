@@ -1,8 +1,11 @@
+using Audit.Application.Abstractions.Services;
+using Audit.Domain.Enums;
 using BuildingBlocks.Application.Abstractions.Persistence;
 using BuildingBlocks.Application.Abstractions.Time;
 using BuildingBlocks.Application.Exceptions;
 using Email.Application.Abstractions.Repositories;
 using Email.Application.Abstractions.Services;
+using Email.Application.Common;
 using Email.Domain.Enums;
 using Microsoft.Extensions.Logging;
 
@@ -18,6 +21,7 @@ public sealed class EmailCampaignSender : IEmailCampaignSender
     private readonly IEmailPasswordProtector _passwordProtector;
     private readonly IEmailTemplateRenderer _templateRenderer;
     private readonly IOrganizationSmtpEmailSender _smtpEmailSender;
+    private readonly IAuditLogService _auditLogService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<EmailCampaignSender> _logger;
@@ -31,6 +35,7 @@ public sealed class EmailCampaignSender : IEmailCampaignSender
         IEmailPasswordProtector passwordProtector,
         IEmailTemplateRenderer templateRenderer,
         IOrganizationSmtpEmailSender smtpEmailSender,
+        IAuditLogService auditLogService,
         IDateTimeProvider dateTimeProvider,
         IUnitOfWork unitOfWork,
         ILogger<EmailCampaignSender> logger)
@@ -43,6 +48,7 @@ public sealed class EmailCampaignSender : IEmailCampaignSender
         _passwordProtector = passwordProtector;
         _templateRenderer = templateRenderer;
         _smtpEmailSender = smtpEmailSender;
+        _auditLogService = auditLogService;
         _dateTimeProvider = dateTimeProvider;
         _unitOfWork = unitOfWork;
         _logger = logger;
@@ -167,6 +173,18 @@ public sealed class EmailCampaignSender : IEmailCampaignSender
         }
 
         campaign.Complete(_dateTimeProvider.UtcNow);
+        await _auditLogService.LogAsync(
+            organizationId,
+            campaign.CreatedByUserId,
+            "Email",
+            AuditAction.Send,
+            "EmailCampaign",
+            campaign.Id,
+            $"Email campaign {campaign.Id} was sent",
+            oldValues: null,
+            newValues: EmailAuditSnapshots.Campaign(campaign),
+            cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }

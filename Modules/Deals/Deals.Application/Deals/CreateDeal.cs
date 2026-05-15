@@ -1,3 +1,5 @@
+using Audit.Application.Abstractions.Services;
+using Audit.Domain.Enums;
 using Bonus.Application.Abstractions.Services;
 using BuildingBlocks.Application.Abstractions.Auth;
 using BuildingBlocks.Application.Abstractions.Persistence;
@@ -46,6 +48,7 @@ public sealed class CreateDealCommandHandler : IRequestHandler<CreateDealCommand
     private readonly ICatalogLookupService _catalogLookupService;
     private readonly IBonusDealDiscountService _bonusDealDiscountService;
     private readonly DealCalculationService _calculationService;
+    private readonly IAuditLogService _auditLogService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -60,6 +63,7 @@ public sealed class CreateDealCommandHandler : IRequestHandler<CreateDealCommand
         ICatalogLookupService catalogLookupService,
         IBonusDealDiscountService bonusDealDiscountService,
         DealCalculationService calculationService,
+        IAuditLogService auditLogService,
         IDateTimeProvider dateTimeProvider,
         IUnitOfWork unitOfWork)
     {
@@ -73,6 +77,7 @@ public sealed class CreateDealCommandHandler : IRequestHandler<CreateDealCommand
         _catalogLookupService = catalogLookupService;
         _bonusDealDiscountService = bonusDealDiscountService;
         _calculationService = calculationService;
+        _auditLogService = auditLogService;
         _dateTimeProvider = dateTimeProvider;
         _unitOfWork = unitOfWork;
     }
@@ -150,6 +155,18 @@ public sealed class CreateDealCommandHandler : IRequestHandler<CreateDealCommand
 
         await _dealRepository.AddAsync(deal, cancellationToken);
         await _dealStageHistoryRepository.AddAsync(history, cancellationToken);
+        await _auditLogService.LogAsync(
+            organizationId,
+            currentUserId,
+            "Deals",
+            AuditAction.Create,
+            "Deal",
+            deal.Id,
+            $"Deal {deal.Id} was created",
+            oldValues: null,
+            newValues: DealAuditSnapshots.Deal(deal),
+            cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return deal.ToResponse(initialStage.Name, [history]);

@@ -1,3 +1,5 @@
+using Audit.Application.Abstractions.Services;
+using Audit.Domain.Enums;
 using BuildingBlocks.Application.Abstractions.Auth;
 using BuildingBlocks.Application.Abstractions.Persistence;
 using BuildingBlocks.Application.Exceptions;
@@ -50,6 +52,7 @@ public sealed class UpdateRolePermissionsCommandHandler : IRequestHandler<Update
     private readonly IRoleRepository _roleRepository;
     private readonly IModuleRepository _moduleRepository;
     private readonly IModuleRoleRepository _moduleRoleRepository;
+    private readonly IAuditLogService _auditLogService;
     private readonly IUnitOfWork _unitOfWork;
 
     public UpdateRolePermissionsCommandHandler(
@@ -58,6 +61,7 @@ public sealed class UpdateRolePermissionsCommandHandler : IRequestHandler<Update
         IRoleRepository roleRepository,
         IModuleRepository moduleRepository,
         IModuleRoleRepository moduleRoleRepository,
+        IAuditLogService auditLogService,
         IUnitOfWork unitOfWork)
     {
         _currentUserService = currentUserService;
@@ -65,6 +69,7 @@ public sealed class UpdateRolePermissionsCommandHandler : IRequestHandler<Update
         _roleRepository = roleRepository;
         _moduleRepository = moduleRepository;
         _moduleRoleRepository = moduleRoleRepository;
+        _auditLogService = auditLogService;
         _unitOfWork = unitOfWork;
     }
 
@@ -94,9 +99,22 @@ public sealed class UpdateRolePermissionsCommandHandler : IRequestHandler<Update
 
         var oldPermissions = await _moduleRoleRepository.GetByRoleIdAsync(role.Id, cancellationToken);
         var newPermissions = await BuildModuleRolesAsync(role.Id, organizationId, request.Permissions, cancellationToken);
+        var oldSnapshot = IdentityAuditSnapshots.RolePermissions(oldPermissions);
 
         _moduleRoleRepository.DeleteRange(oldPermissions);
         await _moduleRoleRepository.AddRangeAsync(newPermissions, cancellationToken);
+        await _auditLogService.LogAsync(
+            organizationId,
+            currentUserId,
+            "Roles",
+            AuditAction.PermissionChange,
+            "Role",
+            role.Id,
+            $"Role {role.Name} permissions were updated",
+            oldSnapshot,
+            IdentityAuditSnapshots.RolePermissions(newPermissions),
+            cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new SuccessResponse(true);

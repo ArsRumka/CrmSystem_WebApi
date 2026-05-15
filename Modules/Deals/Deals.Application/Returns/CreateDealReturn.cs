@@ -1,3 +1,5 @@
+using Audit.Application.Abstractions.Services;
+using Audit.Domain.Enums;
 using BuildingBlocks.Application.Abstractions.Auth;
 using BuildingBlocks.Application.Abstractions.Persistence;
 using BuildingBlocks.Application.Abstractions.Time;
@@ -34,6 +36,7 @@ public sealed class CreateDealReturnCommandHandler : IRequestHandler<CreateDealR
     private readonly IDealStageRepository _dealStageRepository;
     private readonly IDealReturnRepository _dealReturnRepository;
     private readonly DealReturnCalculationService _calculationService;
+    private readonly IAuditLogService _auditLogService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -43,6 +46,7 @@ public sealed class CreateDealReturnCommandHandler : IRequestHandler<CreateDealR
         IDealStageRepository dealStageRepository,
         IDealReturnRepository dealReturnRepository,
         DealReturnCalculationService calculationService,
+        IAuditLogService auditLogService,
         IDateTimeProvider dateTimeProvider,
         IUnitOfWork unitOfWork)
     {
@@ -51,6 +55,7 @@ public sealed class CreateDealReturnCommandHandler : IRequestHandler<CreateDealR
         _dealStageRepository = dealStageRepository;
         _dealReturnRepository = dealReturnRepository;
         _calculationService = calculationService;
+        _auditLogService = auditLogService;
         _dateTimeProvider = dateTimeProvider;
         _unitOfWork = unitOfWork;
     }
@@ -99,6 +104,18 @@ public sealed class CreateDealReturnCommandHandler : IRequestHandler<CreateDealR
             calculation.Items);
 
         await _dealReturnRepository.AddAsync(dealReturn, cancellationToken);
+        await _auditLogService.LogAsync(
+            organizationId,
+            userId,
+            "Deals",
+            AuditAction.Return,
+            "DealReturn",
+            dealReturn.Id,
+            $"Deal return {dealReturn.Id} was created",
+            oldValues: null,
+            newValues: DealAuditSnapshots.DealReturn(dealReturn),
+            cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return dealReturn.ToResponse();

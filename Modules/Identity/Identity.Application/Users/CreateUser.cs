@@ -1,3 +1,5 @@
+using Audit.Application.Abstractions.Services;
+using Audit.Domain.Enums;
 using BuildingBlocks.Application.Abstractions.Auth;
 using BuildingBlocks.Application.Abstractions.Email;
 using BuildingBlocks.Application.Abstractions.Persistence;
@@ -38,6 +40,7 @@ public sealed class CreateUserCommandHandler : IRequestHandler<CreateUserCommand
     private readonly ITokenGenerator _tokenGenerator;
     private readonly ITokenHasher _tokenHasher;
     private readonly IEmailSender _emailSender;
+    private readonly IAuditLogService _auditLogService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -51,6 +54,7 @@ public sealed class CreateUserCommandHandler : IRequestHandler<CreateUserCommand
         ITokenGenerator tokenGenerator,
         ITokenHasher tokenHasher,
         IEmailSender emailSender,
+        IAuditLogService auditLogService,
         IDateTimeProvider dateTimeProvider,
         IUnitOfWork unitOfWork)
     {
@@ -63,6 +67,7 @@ public sealed class CreateUserCommandHandler : IRequestHandler<CreateUserCommand
         _tokenGenerator = tokenGenerator;
         _tokenHasher = tokenHasher;
         _emailSender = emailSender;
+        _auditLogService = auditLogService;
         _dateTimeProvider = dateTimeProvider;
         _unitOfWork = unitOfWork;
     }
@@ -115,6 +120,18 @@ public sealed class CreateUserCommandHandler : IRequestHandler<CreateUserCommand
             "Confirm your CRM account email",
             $"Use this confirmation token: {emailConfirmationTokenPlain}",
             cancellationToken);
+        await _auditLogService.LogAsync(
+            organizationId,
+            currentUserId,
+            "Users",
+            AuditAction.Create,
+            "User",
+            user.Id,
+            $"User {user.Name} was created",
+            oldValues: null,
+            newValues: IdentityAuditSnapshots.User(user),
+            cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new UserResponse(user.Id, user.OrganizationId, user.RoleId, user.Name, user.Email, user.IsActive, user.IsEmailConfirmed);

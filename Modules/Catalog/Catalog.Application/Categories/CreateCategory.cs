@@ -1,3 +1,5 @@
+using Audit.Application.Abstractions.Services;
+using Audit.Domain.Enums;
 using BuildingBlocks.Application.Abstractions.Auth;
 using BuildingBlocks.Application.Abstractions.Persistence;
 using BuildingBlocks.Application.Abstractions.Time;
@@ -41,17 +43,20 @@ public sealed class CreateCategoryCommandHandler : IRequestHandler<CreateCategor
 {
     private readonly ICurrentUserService _currentUserService;
     private readonly ICategoryRepository _categoryRepository;
+    private readonly IAuditLogService _auditLogService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
 
     public CreateCategoryCommandHandler(
         ICurrentUserService currentUserService,
         ICategoryRepository categoryRepository,
+        IAuditLogService auditLogService,
         IDateTimeProvider dateTimeProvider,
         IUnitOfWork unitOfWork)
     {
         _currentUserService = currentUserService;
         _categoryRepository = categoryRepository;
+        _auditLogService = auditLogService;
         _dateTimeProvider = dateTimeProvider;
         _unitOfWork = unitOfWork;
     }
@@ -78,6 +83,27 @@ public sealed class CreateCategoryCommandHandler : IRequestHandler<CreateCategor
             _dateTimeProvider.UtcNow);
 
         await _categoryRepository.AddAsync(category, cancellationToken);
+        await _auditLogService.LogAsync(
+            organizationId,
+            _currentUserService.UserId,
+            "Catalog",
+            AuditAction.Create,
+            "Category",
+            category.Id,
+            $"Category {category.Name} was created",
+            oldValues: null,
+            newValues: new
+            {
+                category.Name,
+                category.ParentCategoryId,
+                category.BonusType,
+                category.BonusValue,
+                category.DiscountType,
+                category.DiscountValue,
+                category.IsActive
+            },
+            cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return category.ToResponse();

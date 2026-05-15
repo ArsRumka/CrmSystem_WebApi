@@ -21,6 +21,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Modules\Audit\Audit.Application\Audit.Application.csproj" />
+    <ProjectReference Include="..\Modules\Audit\Audit.Infrastructure\Audit.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Audit\Audit.Presentation\Audit.Presentation.csproj" />
     <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Chat\Chat.Application\Chat.Application.csproj" />
     <ProjectReference Include="..\Modules\Chat\Chat.Infrastructure\Chat.Infrastructure.csproj" />

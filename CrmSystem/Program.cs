@@ -1,3 +1,6 @@
+using Audit.Application;
+using Audit.Infrastructure;
+using Audit.Presentation.Controllers;
 using BuildingBlocks.Infrastructure.Persistence;
 using Chat.Application;
 using Chat.Infrastructure;
@@ -50,6 +53,7 @@ builder.Services.AddScoped<AppDbContext>(provider =>
     provider.GetRequiredService<ApplicationDbContext>());
 
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddAuditApplication();
 builder.Services.AddIdentityApplication();
 builder.Services.AddChatApplication();
 builder.Services.AddBonusApplication();
@@ -59,6 +63,7 @@ builder.Services.AddDealsApplication();
 builder.Services.AddEmailApplication();
 builder.Services.AddWarehouseApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddAuditInfrastructure();
 builder.Services.AddIdentityInfrastructure();
 builder.Services.AddChatInfrastructure();
 builder.Services.AddChatPresentation();
@@ -71,6 +76,7 @@ builder.Services.AddWarehouseInfrastructure();
 
 builder.Services
     .AddControllers()
+    .AddApplicationPart(typeof(AuditLogsController).Assembly)
     .AddApplicationPart(typeof(PublicIdentityController).Assembly)
     .AddApplicationPart(typeof(ChatConversationsController).Assembly)
     .AddApplicationPart(typeof(BonusSettingsController).Assembly)
@@ -176,3 +182,5 @@ app.MapControllers();
 app.MapHub<ChatHub>("/hubs/chat");
 
 app.Run();
+
+public partial class Program { }

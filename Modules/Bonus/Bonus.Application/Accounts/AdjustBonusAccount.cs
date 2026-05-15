@@ -1,3 +1,5 @@
+using Audit.Application.Abstractions.Services;
+using Audit.Domain.Enums;
 using Bonus.Application.Abstractions.Lookups;
 using Bonus.Application.Abstractions.Repositories;
 using Bonus.Application.Common;
@@ -36,6 +38,7 @@ public sealed class AdjustBonusAccountCommandHandler
     private readonly IBonusSettingsRepository _settingsRepository;
     private readonly IBonusAccountRepository _accountRepository;
     private readonly IBonusTransactionRepository _transactionRepository;
+    private readonly IAuditLogService _auditLogService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -45,6 +48,7 @@ public sealed class AdjustBonusAccountCommandHandler
         IBonusSettingsRepository settingsRepository,
         IBonusAccountRepository accountRepository,
         IBonusTransactionRepository transactionRepository,
+        IAuditLogService auditLogService,
         IDateTimeProvider dateTimeProvider,
         IUnitOfWork unitOfWork)
     {
@@ -53,6 +57,7 @@ public sealed class AdjustBonusAccountCommandHandler
         _settingsRepository = settingsRepository;
         _accountRepository = accountRepository;
         _transactionRepository = transactionRepository;
+        _auditLogService = auditLogService;
         _dateTimeProvider = dateTimeProvider;
         _unitOfWork = unitOfWork;
     }
@@ -102,22 +107,42 @@ public sealed class AdjustBonusAccountCommandHandler
             account.Decrease(points, now);
         }
 
-        await _transactionRepository.AddAsync(
-            new BonusTransaction(
-                Guid.NewGuid(),
-                organizationId,
-                account.Id,
+        var transaction = new BonusTransaction(
+            Guid.NewGuid(),
+            organizationId,
+            account.Id,
+            account.ClientId,
+            dealId: null,
+            transactionType,
+            points,
+            BonusRounding.RoundMoney(points * pointValue),
+            pointValue,
+            balanceBefore,
+            account.Balance,
+            request.Reason,
+            now,
+            userId);
+
+        await _transactionRepository.AddAsync(transaction, cancellationToken);
+        await _auditLogService.LogAsync(
+            organizationId,
+            userId,
+            "Bonus",
+            AuditAction.ManualAdjustment,
+            "BonusAccount",
+            account.Id,
+            $"Bonus account {account.Id} was manually adjusted",
+            oldValues: new
+            {
                 account.ClientId,
-                dealId: null,
-                transactionType,
-                points,
-                BonusRounding.RoundMoney(points * pointValue),
-                pointValue,
+                BalanceBefore = balanceBefore
+            },
+            newValues: BonusAuditSnapshots.ManualAdjustment(
+                account,
+                request.PointsDelta,
                 balanceBefore,
-                account.Balance,
-                request.Reason,
-                now,
-                userId),
+                transactionType,
+                request.Reason),
             cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);

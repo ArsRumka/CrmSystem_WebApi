@@ -1,3 +1,5 @@
+using Audit.Application.Abstractions.Services;
+using Audit.Domain.Enums;
 using BuildingBlocks.Application.Abstractions.Auth;
 using BuildingBlocks.Application.Abstractions.Persistence;
 using BuildingBlocks.Application.Abstractions.Time;
@@ -38,6 +40,7 @@ public sealed class UpdateEmailAutomationRuleCommandHandler
     private readonly ICurrentUserService _currentUserService;
     private readonly IEmailAutomationRuleRepository _ruleRepository;
     private readonly IEmailTemplateRepository _templateRepository;
+    private readonly IAuditLogService _auditLogService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -45,12 +48,14 @@ public sealed class UpdateEmailAutomationRuleCommandHandler
         ICurrentUserService currentUserService,
         IEmailAutomationRuleRepository ruleRepository,
         IEmailTemplateRepository templateRepository,
+        IAuditLogService auditLogService,
         IDateTimeProvider dateTimeProvider,
         IUnitOfWork unitOfWork)
     {
         _currentUserService = currentUserService;
         _ruleRepository = ruleRepository;
         _templateRepository = templateRepository;
+        _auditLogService = auditLogService;
         _dateTimeProvider = dateTimeProvider;
         _unitOfWork = unitOfWork;
     }
@@ -77,10 +82,15 @@ public sealed class UpdateEmailAutomationRuleCommandHandler
 
         var now = _dateTimeProvider.UtcNow;
         var rule = await _ruleRepository.GetByOrganizationIdAsync(organizationId, cancellationToken);
+        object? oldSnapshot = null;
         if (rule is null)
         {
             rule = EmailAutomationRule.CreateDefault(organizationId, now);
             await _ruleRepository.AddAsync(rule, cancellationToken);
+        }
+        else
+        {
+            oldSnapshot = EmailAuditSnapshots.AutomationRule(rule);
         }
 
         rule.Update(
@@ -90,6 +100,18 @@ public sealed class UpdateEmailAutomationRuleCommandHandler
             request.RepeatAfterDays,
             now,
             userId);
+
+        await _auditLogService.LogAsync(
+            organizationId,
+            userId,
+            "Email",
+            AuditAction.Update,
+            "EmailAutomationRule",
+            rule.Id,
+            "Email automation rule was updated",
+            oldSnapshot,
+            EmailAuditSnapshots.AutomationRule(rule),
+            cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

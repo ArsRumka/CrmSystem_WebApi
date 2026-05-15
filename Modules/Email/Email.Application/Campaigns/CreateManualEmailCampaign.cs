@@ -1,3 +1,5 @@
+using Audit.Application.Abstractions.Services;
+using Audit.Domain.Enums;
 using BuildingBlocks.Application.Abstractions.Auth;
 using BuildingBlocks.Application.Abstractions.Persistence;
 using BuildingBlocks.Application.Abstractions.Time;
@@ -45,6 +47,7 @@ public sealed class CreateManualEmailCampaignCommandHandler
     private readonly IEmailTemplateRepository _templateRepository;
     private readonly IEmailCampaignRepository _campaignRepository;
     private readonly IEmailClientLookupService _clientLookupService;
+    private readonly IAuditLogService _auditLogService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -53,6 +56,7 @@ public sealed class CreateManualEmailCampaignCommandHandler
         IEmailTemplateRepository templateRepository,
         IEmailCampaignRepository campaignRepository,
         IEmailClientLookupService clientLookupService,
+        IAuditLogService auditLogService,
         IDateTimeProvider dateTimeProvider,
         IUnitOfWork unitOfWork)
     {
@@ -60,6 +64,7 @@ public sealed class CreateManualEmailCampaignCommandHandler
         _templateRepository = templateRepository;
         _campaignRepository = campaignRepository;
         _clientLookupService = clientLookupService;
+        _auditLogService = auditLogService;
         _dateTimeProvider = dateTimeProvider;
         _unitOfWork = unitOfWork;
     }
@@ -112,6 +117,18 @@ public sealed class CreateManualEmailCampaignCommandHandler
         campaign.AddRecipients(recipients);
 
         await _campaignRepository.AddAsync(campaign, cancellationToken);
+        await _auditLogService.LogAsync(
+            organizationId,
+            userId,
+            "Email",
+            AuditAction.Create,
+            "EmailCampaign",
+            campaign.Id,
+            $"Manual email campaign {campaign.Name} was created",
+            oldValues: null,
+            newValues: EmailAuditSnapshots.Campaign(campaign),
+            cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return campaign.ToResponse();

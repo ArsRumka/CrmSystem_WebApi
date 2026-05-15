@@ -1,3 +1,5 @@
+using Audit.Application.Abstractions.Services;
+using Audit.Domain.Enums;
 using BuildingBlocks.Application.Abstractions.Auth;
 using BuildingBlocks.Application.Abstractions.Persistence;
 using BuildingBlocks.Application.Abstractions.Time;
@@ -47,17 +49,20 @@ public sealed class CreateClientCommandHandler : IRequestHandler<CreateClientCom
 {
     private readonly ICurrentUserService _currentUserService;
     private readonly IClientRepository _clientRepository;
+    private readonly IAuditLogService _auditLogService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
 
     public CreateClientCommandHandler(
         ICurrentUserService currentUserService,
         IClientRepository clientRepository,
+        IAuditLogService auditLogService,
         IDateTimeProvider dateTimeProvider,
         IUnitOfWork unitOfWork)
     {
         _currentUserService = currentUserService;
         _clientRepository = clientRepository;
+        _auditLogService = auditLogService;
         _dateTimeProvider = dateTimeProvider;
         _unitOfWork = unitOfWork;
     }
@@ -81,6 +86,29 @@ public sealed class CreateClientCommandHandler : IRequestHandler<CreateClientCom
             _dateTimeProvider.UtcNow);
 
         await _clientRepository.AddAsync(client, cancellationToken);
+        await _auditLogService.LogAsync(
+            organizationId,
+            _currentUserService.UserId,
+            "Clients",
+            AuditAction.Create,
+            "Client",
+            client.Id,
+            $"Client {client.LastName} {client.FirstName} was created",
+            oldValues: null,
+            newValues: new
+            {
+                client.FirstName,
+                client.LastName,
+                client.MiddleName,
+                client.Email,
+                client.Phone,
+                client.Status,
+                client.Source,
+                client.AllowMarketingEmails,
+                client.IsActive
+            },
+            cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return client.ToResponse();

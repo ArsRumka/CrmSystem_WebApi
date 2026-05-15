@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Audit\Audit.Application\Audit.Application.csproj" />
     <ProjectReference Include="..\..\..\Infrastructure\Infrastructure.csproj" />
     <ProjectReference Include="..\..\Clients\Clients.Domain\Clients.Domain.csproj" />
     <ProjectReference Include="..\..\Deals\Deals.Domain\Deals.Domain.csproj" />

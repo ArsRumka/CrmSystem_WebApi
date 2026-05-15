@@ -1,3 +1,5 @@
+using Audit.Application.Abstractions.Services;
+using Audit.Domain.Enums;
 using BuildingBlocks.Application.Abstractions.Auth;
 using BuildingBlocks.Application.Abstractions.Persistence;
 using BuildingBlocks.Application.Abstractions.Time;
@@ -34,6 +36,7 @@ public sealed class AddParticipantCommandHandler
     private readonly IChatConversationRepository _conversationRepository;
     private readonly IChatParticipantRepository _participantRepository;
     private readonly IChatUserLookupService _userLookupService;
+    private readonly IAuditLogService _auditLogService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ChatResponseFactory _responseFactory;
@@ -44,6 +47,7 @@ public sealed class AddParticipantCommandHandler
         IChatConversationRepository conversationRepository,
         IChatParticipantRepository participantRepository,
         IChatUserLookupService userLookupService,
+        IAuditLogService auditLogService,
         IDateTimeProvider dateTimeProvider,
         IUnitOfWork unitOfWork,
         ChatResponseFactory responseFactory)
@@ -53,6 +57,7 @@ public sealed class AddParticipantCommandHandler
         _conversationRepository = conversationRepository;
         _participantRepository = participantRepository;
         _userLookupService = userLookupService;
+        _auditLogService = auditLogService;
         _dateTimeProvider = dateTimeProvider;
         _unitOfWork = unitOfWork;
         _responseFactory = responseFactory;
@@ -111,7 +116,21 @@ public sealed class AddParticipantCommandHandler
                 throw new ConflictException("User is already an active participant");
             }
 
+            var oldSnapshot = ChatAuditSnapshots.Participant(existingParticipant);
+
             existingParticipant.Reactivate(now);
+            await _auditLogService.LogAsync(
+                organizationId,
+                userId,
+                "Chat",
+                AuditAction.Update,
+                "ChatParticipant",
+                existingParticipant.Id,
+                $"Chat participant {existingParticipant.Id} was added",
+                oldSnapshot,
+                ChatAuditSnapshots.Participant(existingParticipant),
+                cancellationToken);
+
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             return await _responseFactory.CreateParticipantResponseAsync(existingParticipant, cancellationToken);
         }
@@ -124,6 +143,18 @@ public sealed class AddParticipantCommandHandler
             now);
 
         await _participantRepository.AddAsync(participant, cancellationToken);
+        await _auditLogService.LogAsync(
+            organizationId,
+            userId,
+            "Chat",
+            AuditAction.Create,
+            "ChatParticipant",
+            participant.Id,
+            $"Chat participant {participant.Id} was added",
+            oldValues: null,
+            newValues: ChatAuditSnapshots.Participant(participant),
+            cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return await _responseFactory.CreateParticipantResponseAsync(participant, cancellationToken);

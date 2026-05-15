@@ -1,3 +1,5 @@
+using Audit.Application.Abstractions.Services;
+using Audit.Domain.Enums;
 using BuildingBlocks.Application.Abstractions.Auth;
 using BuildingBlocks.Application.Abstractions.Persistence;
 using BuildingBlocks.Application.Exceptions;
@@ -27,6 +29,7 @@ public sealed class DeleteRoleCommandHandler : IRequestHandler<DeleteRoleCommand
     private readonly IPermissionService _permissionService;
     private readonly IRoleRepository _roleRepository;
     private readonly IUserRepository _userRepository;
+    private readonly IAuditLogService _auditLogService;
     private readonly IUnitOfWork _unitOfWork;
 
     public DeleteRoleCommandHandler(
@@ -34,12 +37,14 @@ public sealed class DeleteRoleCommandHandler : IRequestHandler<DeleteRoleCommand
         IPermissionService permissionService,
         IRoleRepository roleRepository,
         IUserRepository userRepository,
+        IAuditLogService auditLogService,
         IUnitOfWork unitOfWork)
     {
         _currentUserService = currentUserService;
         _permissionService = permissionService;
         _roleRepository = roleRepository;
         _userRepository = userRepository;
+        _auditLogService = auditLogService;
         _unitOfWork = unitOfWork;
     }
 
@@ -74,6 +79,21 @@ public sealed class DeleteRoleCommandHandler : IRequestHandler<DeleteRoleCommand
         }
 
         _roleRepository.Delete(role);
+        await _auditLogService.LogAsync(
+            organizationId,
+            currentUserId,
+            "Roles",
+            AuditAction.Delete,
+            "Role",
+            role.Id,
+            $"Role {role.Name} was deleted",
+            oldValues: new
+            {
+                role.Name
+            },
+            newValues: null,
+            cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new SuccessResponse(true);

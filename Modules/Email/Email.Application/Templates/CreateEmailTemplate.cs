@@ -1,3 +1,5 @@
+using Audit.Application.Abstractions.Services;
+using Audit.Domain.Enums;
 using BuildingBlocks.Application.Abstractions.Auth;
 using BuildingBlocks.Application.Abstractions.Persistence;
 using BuildingBlocks.Application.Abstractions.Time;
@@ -31,17 +33,20 @@ public sealed class CreateEmailTemplateCommandHandler
 {
     private readonly ICurrentUserService _currentUserService;
     private readonly IEmailTemplateRepository _templateRepository;
+    private readonly IAuditLogService _auditLogService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
 
     public CreateEmailTemplateCommandHandler(
         ICurrentUserService currentUserService,
         IEmailTemplateRepository templateRepository,
+        IAuditLogService auditLogService,
         IDateTimeProvider dateTimeProvider,
         IUnitOfWork unitOfWork)
     {
         _currentUserService = currentUserService;
         _templateRepository = templateRepository;
+        _auditLogService = auditLogService;
         _dateTimeProvider = dateTimeProvider;
         _unitOfWork = unitOfWork;
     }
@@ -63,6 +68,18 @@ public sealed class CreateEmailTemplateCommandHandler
             _dateTimeProvider.UtcNow);
 
         await _templateRepository.AddAsync(template, cancellationToken);
+        await _auditLogService.LogAsync(
+            organizationId,
+            userId,
+            "Email",
+            AuditAction.Create,
+            "EmailTemplate",
+            template.Id,
+            $"Email template {template.Name} was created",
+            oldValues: null,
+            newValues: EmailAuditSnapshots.Template(template),
+            cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return template.ToResponse();

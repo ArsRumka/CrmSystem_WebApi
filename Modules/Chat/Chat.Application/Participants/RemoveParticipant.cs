@@ -1,3 +1,5 @@
+using Audit.Application.Abstractions.Services;
+using Audit.Domain.Enums;
 using BuildingBlocks.Application.Abstractions.Auth;
 using BuildingBlocks.Application.Abstractions.Persistence;
 using BuildingBlocks.Application.Abstractions.Time;
@@ -31,6 +33,7 @@ public sealed class RemoveParticipantCommandHandler
     private readonly IPermissionService _permissionService;
     private readonly IChatConversationRepository _conversationRepository;
     private readonly IChatParticipantRepository _participantRepository;
+    private readonly IAuditLogService _auditLogService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ChatResponseFactory _responseFactory;
@@ -40,6 +43,7 @@ public sealed class RemoveParticipantCommandHandler
         IPermissionService permissionService,
         IChatConversationRepository conversationRepository,
         IChatParticipantRepository participantRepository,
+        IAuditLogService auditLogService,
         IDateTimeProvider dateTimeProvider,
         IUnitOfWork unitOfWork,
         ChatResponseFactory responseFactory)
@@ -48,6 +52,7 @@ public sealed class RemoveParticipantCommandHandler
         _permissionService = permissionService;
         _conversationRepository = conversationRepository;
         _participantRepository = participantRepository;
+        _auditLogService = auditLogService;
         _dateTimeProvider = dateTimeProvider;
         _unitOfWork = unitOfWork;
         _responseFactory = responseFactory;
@@ -107,7 +112,21 @@ public sealed class RemoveParticipantCommandHandler
             }
         }
 
+        var oldSnapshot = ChatAuditSnapshots.Participant(targetParticipant);
+
         targetParticipant.Deactivate(_dateTimeProvider.UtcNow);
+        await _auditLogService.LogAsync(
+            organizationId,
+            userId,
+            "Chat",
+            AuditAction.Delete,
+            "ChatParticipant",
+            targetParticipant.Id,
+            $"Chat participant {targetParticipant.Id} was removed",
+            oldSnapshot,
+            ChatAuditSnapshots.Participant(targetParticipant),
+            cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return await _responseFactory.CreateParticipantResponseAsync(targetParticipant, cancellationToken);

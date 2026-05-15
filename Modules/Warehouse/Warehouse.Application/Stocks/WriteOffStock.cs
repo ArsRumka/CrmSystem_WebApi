@@ -1,3 +1,5 @@
+using Audit.Application.Abstractions.Services;
+using Audit.Domain.Enums;
 using BuildingBlocks.Application.Abstractions.Auth;
 using BuildingBlocks.Application.Abstractions.Persistence;
 using BuildingBlocks.Application.Abstractions.Time;
@@ -37,6 +39,7 @@ public sealed class WriteOffStockCommandHandler : IRequestHandler<WriteOffStockC
     private readonly IProductStockRepository _productStockRepository;
     private readonly IStockMovementRepository _stockMovementRepository;
     private readonly IWarehouseProductLookupService _productLookupService;
+    private readonly IAuditLogService _auditLogService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -46,6 +49,7 @@ public sealed class WriteOffStockCommandHandler : IRequestHandler<WriteOffStockC
         IProductStockRepository productStockRepository,
         IStockMovementRepository stockMovementRepository,
         IWarehouseProductLookupService productLookupService,
+        IAuditLogService auditLogService,
         IDateTimeProvider dateTimeProvider,
         IUnitOfWork unitOfWork)
     {
@@ -54,6 +58,7 @@ public sealed class WriteOffStockCommandHandler : IRequestHandler<WriteOffStockC
         _productStockRepository = productStockRepository;
         _stockMovementRepository = stockMovementRepository;
         _productLookupService = productLookupService;
+        _auditLogService = auditLogService;
         _dateTimeProvider = dateTimeProvider;
         _unitOfWork = unitOfWork;
     }
@@ -84,20 +89,37 @@ public sealed class WriteOffStockCommandHandler : IRequestHandler<WriteOffStockC
         var quantityBefore = stock.Quantity;
         stock.Decrease(request.Quantity, now);
 
-        await _stockMovementRepository.AddAsync(
-            new StockMovement(
-                Guid.NewGuid(),
-                organizationId,
+        var movement = new StockMovement(
+            Guid.NewGuid(),
+            organizationId,
+            request.StorageId,
+            request.ProductId,
+            dealId: null,
+            StockMovementType.WriteOff,
+            request.Quantity,
+            quantityBefore,
+            stock.Quantity,
+            request.Reason,
+            now,
+            userId);
+
+        await _stockMovementRepository.AddAsync(movement, cancellationToken);
+        await _auditLogService.LogAsync(
+            organizationId,
+            userId,
+            "Warehouse",
+            AuditAction.ManualAdjustment,
+            "StockMovement",
+            movement.Id,
+            $"Stock write-off for product {request.ProductId}",
+            oldValues: null,
+            newValues: WarehouseAuditSnapshots.StockMovement(
                 request.StorageId,
                 request.ProductId,
-                dealId: null,
-                StockMovementType.WriteOff,
                 request.Quantity,
                 quantityBefore,
                 stock.Quantity,
-                request.Reason,
-                now,
-                userId),
+                StockMovementType.WriteOff.ToString()),
             cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -121,4 +143,3 @@ public sealed class WriteOffStockCommandHandler : IRequestHandler<WriteOffStockC
         return storage;
     }
 }
-

@@ -1,3 +1,5 @@
+using Audit.Application.Abstractions.Services;
+using Audit.Domain.Enums;
 using BuildingBlocks.Application.Abstractions.Auth;
 using BuildingBlocks.Application.Abstractions.Persistence;
 using BuildingBlocks.Application.Abstractions.Time;
@@ -49,17 +51,20 @@ public sealed class UpdateClientCommandHandler : IRequestHandler<UpdateClientCom
 {
     private readonly ICurrentUserService _currentUserService;
     private readonly IClientRepository _clientRepository;
+    private readonly IAuditLogService _auditLogService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
 
     public UpdateClientCommandHandler(
         ICurrentUserService currentUserService,
         IClientRepository clientRepository,
+        IAuditLogService auditLogService,
         IDateTimeProvider dateTimeProvider,
         IUnitOfWork unitOfWork)
     {
         _currentUserService = currentUserService;
         _clientRepository = clientRepository;
+        _auditLogService = auditLogService;
         _dateTimeProvider = dateTimeProvider;
         _unitOfWork = unitOfWork;
     }
@@ -70,6 +75,19 @@ public sealed class UpdateClientCommandHandler : IRequestHandler<UpdateClientCom
 
         var client = await _clientRepository.GetByIdAsync(organizationId, request.Id, cancellationToken)
             ?? throw new NotFoundException("Client was not found");
+
+        var oldValues = new
+        {
+            client.FirstName,
+            client.LastName,
+            client.MiddleName,
+            client.Email,
+            client.Phone,
+            client.Status,
+            client.Source,
+            client.AllowMarketingEmails,
+            client.IsActive
+        };
 
         client.Update(
             request.FirstName,
@@ -82,6 +100,29 @@ public sealed class UpdateClientCommandHandler : IRequestHandler<UpdateClientCom
             request.AllowMarketingEmails,
             request.Notes,
             _dateTimeProvider.UtcNow);
+
+        await _auditLogService.LogAsync(
+            organizationId,
+            _currentUserService.UserId,
+            "Clients",
+            AuditAction.Update,
+            "Client",
+            client.Id,
+            $"Client {client.LastName} {client.FirstName} was updated",
+            oldValues,
+            newValues: new
+            {
+                client.FirstName,
+                client.LastName,
+                client.MiddleName,
+                client.Email,
+                client.Phone,
+                client.Status,
+                client.Source,
+                client.AllowMarketingEmails,
+                client.IsActive
+            },
+            cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

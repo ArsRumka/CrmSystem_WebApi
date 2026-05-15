@@ -1,3 +1,5 @@
+using Audit.Application.Abstractions.Services;
+using Audit.Domain.Enums;
 using BuildingBlocks.Application.Abstractions.Auth;
 using BuildingBlocks.Application.Abstractions.Persistence;
 using BuildingBlocks.Application.Abstractions.Time;
@@ -33,6 +35,7 @@ public sealed class UpdateDealReturnCommandHandler : IRequestHandler<UpdateDealR
     private readonly IDealStageRepository _dealStageRepository;
     private readonly IDealReturnRepository _dealReturnRepository;
     private readonly DealReturnCalculationService _calculationService;
+    private readonly IAuditLogService _auditLogService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -42,6 +45,7 @@ public sealed class UpdateDealReturnCommandHandler : IRequestHandler<UpdateDealR
         IDealStageRepository dealStageRepository,
         IDealReturnRepository dealReturnRepository,
         DealReturnCalculationService calculationService,
+        IAuditLogService auditLogService,
         IDateTimeProvider dateTimeProvider,
         IUnitOfWork unitOfWork)
     {
@@ -50,6 +54,7 @@ public sealed class UpdateDealReturnCommandHandler : IRequestHandler<UpdateDealR
         _dealStageRepository = dealStageRepository;
         _dealReturnRepository = dealReturnRepository;
         _calculationService = calculationService;
+        _auditLogService = auditLogService;
         _dateTimeProvider = dateTimeProvider;
         _unitOfWork = unitOfWork;
     }
@@ -58,7 +63,7 @@ public sealed class UpdateDealReturnCommandHandler : IRequestHandler<UpdateDealR
         UpdateDealReturnCommand request,
         CancellationToken cancellationToken)
     {
-        var (organizationId, _) = DealsApplicationGuards.RequireOrganizationUser(_currentUserService);
+        var (organizationId, currentUserId) = DealsApplicationGuards.RequireOrganizationUser(_currentUserService);
 
         var dealReturn = await _dealReturnRepository.GetByIdWithItemsAsync(
             organizationId,
@@ -93,12 +98,26 @@ public sealed class UpdateDealReturnCommandHandler : IRequestHandler<UpdateDealR
             completedItems,
             completedReturns);
 
+        var oldSnapshot = DealAuditSnapshots.DealReturn(dealReturn);
+
         dealReturn.Update(
             request.Reason,
             calculation.TotalAmount,
             calculation.MoneyAmount,
             _dateTimeProvider.UtcNow,
             calculation.Items);
+
+        await _auditLogService.LogAsync(
+            organizationId,
+            currentUserId,
+            "Deals",
+            AuditAction.Update,
+            "DealReturn",
+            dealReturn.Id,
+            $"Deal return {dealReturn.Id} was updated",
+            oldSnapshot,
+            DealAuditSnapshots.DealReturn(dealReturn),
+            cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

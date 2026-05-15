@@ -1,3 +1,5 @@
+using Audit.Application.Abstractions.Services;
+using Audit.Domain.Enums;
 using BuildingBlocks.Application.Abstractions.Auth;
 using BuildingBlocks.Application.Abstractions.Persistence;
 using BuildingBlocks.Application.Abstractions.Time;
@@ -40,6 +42,7 @@ public sealed class UpdateEmailSettingsCommandHandler
     private readonly ICurrentUserService _currentUserService;
     private readonly IEmailSettingsRepository _settingsRepository;
     private readonly IEmailPasswordProtector _passwordProtector;
+    private readonly IAuditLogService _auditLogService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -47,12 +50,14 @@ public sealed class UpdateEmailSettingsCommandHandler
         ICurrentUserService currentUserService,
         IEmailSettingsRepository settingsRepository,
         IEmailPasswordProtector passwordProtector,
+        IAuditLogService auditLogService,
         IDateTimeProvider dateTimeProvider,
         IUnitOfWork unitOfWork)
     {
         _currentUserService = currentUserService;
         _settingsRepository = settingsRepository;
         _passwordProtector = passwordProtector;
+        _auditLogService = auditLogService;
         _dateTimeProvider = dateTimeProvider;
         _unitOfWork = unitOfWork;
     }
@@ -61,9 +66,10 @@ public sealed class UpdateEmailSettingsCommandHandler
         UpdateEmailSettingsCommand request,
         CancellationToken cancellationToken)
     {
-        var (organizationId, _) = EmailApplicationGuards.RequireOrganizationUser(_currentUserService);
+        var (organizationId, userId) = EmailApplicationGuards.RequireOrganizationUser(_currentUserService);
         var now = _dateTimeProvider.UtcNow;
         var settings = await _settingsRepository.GetByOrganizationIdAsync(organizationId, cancellationToken);
+        var oldSnapshot = settings is null ? null : EmailAuditSnapshots.Settings(settings);
 
         var passwordEncrypted = !string.IsNullOrWhiteSpace(request.SmtpPassword)
             ? _passwordProtector.Protect(request.SmtpPassword)
@@ -104,6 +110,18 @@ public sealed class UpdateEmailSettingsCommandHandler
                 request.IsEnabled,
                 now);
         }
+
+        await _auditLogService.LogAsync(
+            organizationId,
+            userId,
+            "Email",
+            AuditAction.Update,
+            "EmailSettings",
+            settings.Id,
+            "Email settings were updated",
+            oldSnapshot,
+            EmailAuditSnapshots.Settings(settings),
+            cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

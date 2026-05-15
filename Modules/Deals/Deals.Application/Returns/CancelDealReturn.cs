@@ -1,3 +1,5 @@
+using Audit.Application.Abstractions.Services;
+using Audit.Domain.Enums;
 using BuildingBlocks.Application.Abstractions.Auth;
 using BuildingBlocks.Application.Abstractions.Persistence;
 using BuildingBlocks.Application.Abstractions.Time;
@@ -25,17 +27,20 @@ public sealed class CancelDealReturnCommandHandler : IRequestHandler<CancelDealR
 {
     private readonly ICurrentUserService _currentUserService;
     private readonly IDealReturnRepository _dealReturnRepository;
+    private readonly IAuditLogService _auditLogService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
 
     public CancelDealReturnCommandHandler(
         ICurrentUserService currentUserService,
         IDealReturnRepository dealReturnRepository,
+        IAuditLogService auditLogService,
         IDateTimeProvider dateTimeProvider,
         IUnitOfWork unitOfWork)
     {
         _currentUserService = currentUserService;
         _dealReturnRepository = dealReturnRepository;
+        _auditLogService = auditLogService;
         _dateTimeProvider = dateTimeProvider;
         _unitOfWork = unitOfWork;
     }
@@ -54,7 +59,21 @@ public sealed class CancelDealReturnCommandHandler : IRequestHandler<CancelDealR
 
         DealReturnGuards.EnsureDraft(dealReturn);
 
+        var oldSnapshot = DealAuditSnapshots.DealReturn(dealReturn);
+
         dealReturn.Cancel(request.CancellationReason, userId, _dateTimeProvider.UtcNow);
+        await _auditLogService.LogAsync(
+            organizationId,
+            userId,
+            "Deals",
+            AuditAction.Cancel,
+            "DealReturn",
+            dealReturn.Id,
+            $"Deal return {dealReturn.Id} was cancelled",
+            oldSnapshot,
+            DealAuditSnapshots.DealReturn(dealReturn),
+            cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return dealReturn.ToResponse();

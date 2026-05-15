@@ -1,3 +1,5 @@
+using Audit.Application.Abstractions.Services;
+using Audit.Domain.Enums;
 using Bonus.Application.Abstractions.Services;
 using BuildingBlocks.Application.Abstractions.Auth;
 using BuildingBlocks.Application.Abstractions.Persistence;
@@ -32,6 +34,7 @@ public sealed class CompleteDealReturnCommandHandler : IRequestHandler<CompleteD
     private readonly IWarehouseDealReturnService _warehouseDealReturnService;
     private readonly IBonusDealReturnService _bonusDealReturnService;
     private readonly DealReturnCalculationService _calculationService;
+    private readonly IAuditLogService _auditLogService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -43,6 +46,7 @@ public sealed class CompleteDealReturnCommandHandler : IRequestHandler<CompleteD
         IWarehouseDealReturnService warehouseDealReturnService,
         IBonusDealReturnService bonusDealReturnService,
         DealReturnCalculationService calculationService,
+        IAuditLogService auditLogService,
         IDateTimeProvider dateTimeProvider,
         IUnitOfWork unitOfWork)
     {
@@ -53,6 +57,7 @@ public sealed class CompleteDealReturnCommandHandler : IRequestHandler<CompleteD
         _warehouseDealReturnService = warehouseDealReturnService;
         _bonusDealReturnService = bonusDealReturnService;
         _calculationService = calculationService;
+        _auditLogService = auditLogService;
         _dateTimeProvider = dateTimeProvider;
         _unitOfWork = unitOfWork;
     }
@@ -129,6 +134,8 @@ public sealed class CompleteDealReturnCommandHandler : IRequestHandler<CompleteD
             dealReturn.Reason,
             cancellationToken);
 
+        var oldSnapshot = DealAuditSnapshots.DealReturn(dealReturn);
+
         dealReturn.Complete(
             calculation.TotalAmount,
             bonusResult.BonusPointsReturned,
@@ -136,6 +143,18 @@ public sealed class CompleteDealReturnCommandHandler : IRequestHandler<CompleteD
             calculation.MoneyAmount,
             userId,
             _dateTimeProvider.UtcNow);
+
+        await _auditLogService.LogAsync(
+            organizationId,
+            userId,
+            "Deals",
+            AuditAction.Complete,
+            "DealReturn",
+            dealReturn.Id,
+            $"Deal return {dealReturn.Id} was completed",
+            oldSnapshot,
+            newValues: DealAuditSnapshots.DealReturn(dealReturn),
+            cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

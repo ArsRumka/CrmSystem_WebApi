@@ -1,3 +1,5 @@
+using Audit.Application.Abstractions.Services;
+using Audit.Domain.Enums;
 using BuildingBlocks.Application.Abstractions.Auth;
 using BuildingBlocks.Application.Abstractions.Persistence;
 using BuildingBlocks.Application.Abstractions.Time;
@@ -34,6 +36,7 @@ public sealed class CreateContactRequestCommandHandler
     private readonly IChatOrganizationLookupService _organizationLookupService;
     private readonly IChatConversationRepository _conversationRepository;
     private readonly IChatContactRequestRepository _contactRequestRepository;
+    private readonly IAuditLogService _auditLogService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ChatResponseFactory _responseFactory;
@@ -44,6 +47,7 @@ public sealed class CreateContactRequestCommandHandler
         IChatOrganizationLookupService organizationLookupService,
         IChatConversationRepository conversationRepository,
         IChatContactRequestRepository contactRequestRepository,
+        IAuditLogService auditLogService,
         IDateTimeProvider dateTimeProvider,
         IUnitOfWork unitOfWork,
         ChatResponseFactory responseFactory)
@@ -53,6 +57,7 @@ public sealed class CreateContactRequestCommandHandler
         _organizationLookupService = organizationLookupService;
         _conversationRepository = conversationRepository;
         _contactRequestRepository = contactRequestRepository;
+        _auditLogService = auditLogService;
         _dateTimeProvider = dateTimeProvider;
         _unitOfWork = unitOfWork;
         _responseFactory = responseFactory;
@@ -97,6 +102,18 @@ public sealed class CreateContactRequestCommandHandler
             _dateTimeProvider.UtcNow);
 
         await _contactRequestRepository.AddAsync(contactRequest, cancellationToken);
+        await _auditLogService.LogAsync(
+            organizationId,
+            userId,
+            "Chat",
+            AuditAction.Create,
+            "ChatContactRequest",
+            contactRequest.Id,
+            $"Chat contact request {contactRequest.Id} was created",
+            oldValues: null,
+            newValues: ChatAuditSnapshots.ContactRequest(contactRequest),
+            cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return await _responseFactory.CreateContactRequestResponseAsync(contactRequest, cancellationToken);

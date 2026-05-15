@@ -1,8 +1,11 @@
+using Audit.Application.Abstractions.Services;
+using Audit.Domain.Enums;
 using BuildingBlocks.Application.Abstractions.Persistence;
 using BuildingBlocks.Application.Abstractions.Time;
 using BuildingBlocks.Application.Exceptions;
 using Email.Application.Abstractions.Repositories;
 using Email.Application.Abstractions.Services;
+using Email.Application.Common;
 using Email.Application.Contracts;
 using Email.Domain.Entities;
 using Email.Domain.Enums;
@@ -18,6 +21,7 @@ public sealed class EmailAutomationRunner : IEmailAutomationRunner
     private readonly IEmailCampaignRepository _campaignRepository;
     private readonly IEmailClientLookupService _clientLookupService;
     private readonly IEmailCampaignSender _campaignSender;
+    private readonly IAuditLogService _auditLogService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<EmailAutomationRunner> _logger;
@@ -29,6 +33,7 @@ public sealed class EmailAutomationRunner : IEmailAutomationRunner
         IEmailCampaignRepository campaignRepository,
         IEmailClientLookupService clientLookupService,
         IEmailCampaignSender campaignSender,
+        IAuditLogService auditLogService,
         IDateTimeProvider dateTimeProvider,
         IUnitOfWork unitOfWork,
         ILogger<EmailAutomationRunner> logger)
@@ -39,6 +44,7 @@ public sealed class EmailAutomationRunner : IEmailAutomationRunner
         _campaignRepository = campaignRepository;
         _clientLookupService = clientLookupService;
         _campaignSender = campaignSender;
+        _auditLogService = auditLogService;
         _dateTimeProvider = dateTimeProvider;
         _unitOfWork = unitOfWork;
         _logger = logger;
@@ -55,6 +61,26 @@ public sealed class EmailAutomationRunner : IEmailAutomationRunner
             rule = EmailAutomationRule.CreateDefault(organizationId, now);
             rule.MarkRun(now);
             await _ruleRepository.AddAsync(rule, cancellationToken);
+            await _auditLogService.LogAsync(
+                organizationId,
+                null,
+                "Email",
+                AuditAction.Run,
+                "EmailAutomationRule",
+                rule.Id,
+                "Email automation run was completed",
+                oldValues: null,
+                newValues: EmailAuditSnapshots.AutomationRun(
+                    rule,
+                    campaignCreated: false,
+                    campaignId: null,
+                    candidateCount: 0,
+                    totalRecipients: 0,
+                    sentCount: 0,
+                    failedCount: 0,
+                    skippedCount: 0),
+                cancellationToken);
+
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             return new EmailAutomationRunResponse(
@@ -70,6 +96,26 @@ public sealed class EmailAutomationRunner : IEmailAutomationRunner
         }
 
         rule.MarkRun(now);
+        await _auditLogService.LogAsync(
+            organizationId,
+            null,
+            "Email",
+            AuditAction.Run,
+            "EmailAutomationRule",
+            rule.Id,
+            "Email automation run was started",
+            oldValues: null,
+            newValues: EmailAuditSnapshots.AutomationRun(
+                rule,
+                campaignCreated: false,
+                campaignId: null,
+                candidateCount: 0,
+                totalRecipients: 0,
+                sentCount: 0,
+                failedCount: 0,
+                skippedCount: 0),
+            cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         if (!rule.IsEnabled)

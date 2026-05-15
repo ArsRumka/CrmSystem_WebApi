@@ -1,3 +1,5 @@
+using Audit.Application.Abstractions.Services;
+using Audit.Domain.Enums;
 using BuildingBlocks.Application.Abstractions.Auth;
 using BuildingBlocks.Application.Abstractions.Persistence;
 using BuildingBlocks.Application.Abstractions.Time;
@@ -57,6 +59,7 @@ public sealed class CreateConversationCommandHandler
     private readonly IChatUserLookupService _userLookupService;
     private readonly IChatClientLookupService _clientLookupService;
     private readonly IChatDealLookupService _dealLookupService;
+    private readonly IAuditLogService _auditLogService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ChatResponseFactory _responseFactory;
@@ -68,6 +71,7 @@ public sealed class CreateConversationCommandHandler
         IChatUserLookupService userLookupService,
         IChatClientLookupService clientLookupService,
         IChatDealLookupService dealLookupService,
+        IAuditLogService auditLogService,
         IDateTimeProvider dateTimeProvider,
         IUnitOfWork unitOfWork,
         ChatResponseFactory responseFactory)
@@ -78,6 +82,7 @@ public sealed class CreateConversationCommandHandler
         _userLookupService = userLookupService;
         _clientLookupService = clientLookupService;
         _dealLookupService = dealLookupService;
+        _auditLogService = auditLogService;
         _dateTimeProvider = dateTimeProvider;
         _unitOfWork = unitOfWork;
         _responseFactory = responseFactory;
@@ -173,6 +178,18 @@ public sealed class CreateConversationCommandHandler
         }
 
         await _conversationRepository.AddAsync(conversation, cancellationToken);
+        await _auditLogService.LogAsync(
+            organizationId,
+            userId,
+            "Chat",
+            AuditAction.Create,
+            "ChatConversation",
+            conversation.Id,
+            $"Chat conversation {conversation.Id} was created",
+            oldValues: null,
+            newValues: ChatAuditSnapshots.Conversation(conversation),
+            cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return await _responseFactory.CreateConversationResponseAsync(conversation, userId, cancellationToken);

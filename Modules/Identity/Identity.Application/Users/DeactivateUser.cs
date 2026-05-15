@@ -1,3 +1,5 @@
+using Audit.Application.Abstractions.Services;
+using Audit.Domain.Enums;
 using BuildingBlocks.Application.Abstractions.Auth;
 using BuildingBlocks.Application.Abstractions.Persistence;
 using BuildingBlocks.Application.Exceptions;
@@ -26,17 +28,20 @@ public sealed class DeactivateUserCommandHandler : IRequestHandler<DeactivateUse
     private readonly ICurrentUserService _currentUserService;
     private readonly IPermissionService _permissionService;
     private readonly IUserRepository _userRepository;
+    private readonly IAuditLogService _auditLogService;
     private readonly IUnitOfWork _unitOfWork;
 
     public DeactivateUserCommandHandler(
         ICurrentUserService currentUserService,
         IPermissionService permissionService,
         IUserRepository userRepository,
+        IAuditLogService auditLogService,
         IUnitOfWork unitOfWork)
     {
         _currentUserService = currentUserService;
         _permissionService = permissionService;
         _userRepository = userRepository;
+        _auditLogService = auditLogService;
         _unitOfWork = unitOfWork;
     }
 
@@ -64,7 +69,21 @@ public sealed class DeactivateUserCommandHandler : IRequestHandler<DeactivateUse
             throw new ForbiddenException("User belongs to another organization");
         }
 
+        var oldSnapshot = IdentityAuditSnapshots.User(user);
+
         user.Deactivate();
+        await _auditLogService.LogAsync(
+            organizationId,
+            currentUserId,
+            "Users",
+            AuditAction.Deactivate,
+            "User",
+            user.Id,
+            $"User {user.Name} was deactivated",
+            oldSnapshot,
+            IdentityAuditSnapshots.User(user),
+            cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new SuccessResponse(true);

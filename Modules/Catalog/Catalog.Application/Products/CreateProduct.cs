@@ -1,3 +1,5 @@
+using Audit.Application.Abstractions.Services;
+using Audit.Domain.Enums;
 using BuildingBlocks.Application.Abstractions.Auth;
 using BuildingBlocks.Application.Abstractions.Persistence;
 using BuildingBlocks.Application.Abstractions.Time;
@@ -48,6 +50,7 @@ public sealed class CreateProductCommandHandler : IRequestHandler<CreateProductC
     private readonly ICurrentUserService _currentUserService;
     private readonly ICategoryRepository _categoryRepository;
     private readonly IProductRepository _productRepository;
+    private readonly IAuditLogService _auditLogService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -55,12 +58,14 @@ public sealed class CreateProductCommandHandler : IRequestHandler<CreateProductC
         ICurrentUserService currentUserService,
         ICategoryRepository categoryRepository,
         IProductRepository productRepository,
+        IAuditLogService auditLogService,
         IDateTimeProvider dateTimeProvider,
         IUnitOfWork unitOfWork)
     {
         _currentUserService = currentUserService;
         _categoryRepository = categoryRepository;
         _productRepository = productRepository;
+        _auditLogService = auditLogService;
         _dateTimeProvider = dateTimeProvider;
         _unitOfWork = unitOfWork;
     }
@@ -90,6 +95,29 @@ public sealed class CreateProductCommandHandler : IRequestHandler<CreateProductC
             _dateTimeProvider.UtcNow);
 
         await _productRepository.AddAsync(product, cancellationToken);
+        await _auditLogService.LogAsync(
+            organizationId,
+            _currentUserService.UserId,
+            "Catalog",
+            AuditAction.Create,
+            "Product",
+            product.Id,
+            $"Product {product.Name} was created",
+            oldValues: null,
+            newValues: new
+            {
+                product.Name,
+                product.CategoryId,
+                product.Sku,
+                product.Price,
+                product.BonusType,
+                product.BonusValue,
+                product.DiscountType,
+                product.DiscountValue,
+                product.IsActive
+            },
+            cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return product.ToResponse();

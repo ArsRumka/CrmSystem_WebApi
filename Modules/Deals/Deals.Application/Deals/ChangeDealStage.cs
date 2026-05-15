@@ -1,3 +1,5 @@
+using Audit.Application.Abstractions.Services;
+using Audit.Domain.Enums;
 using Bonus.Application.Abstractions.Services;
 using BuildingBlocks.Application.Abstractions.Auth;
 using BuildingBlocks.Application.Abstractions.Persistence;
@@ -34,6 +36,7 @@ public sealed class ChangeDealStageCommandHandler : IRequestHandler<ChangeDealSt
     private readonly IDealStageHistoryRepository _dealStageHistoryRepository;
     private readonly IWarehouseDealCompletionService _warehouseDealCompletionService;
     private readonly IBonusDealCompletionService _bonusDealCompletionService;
+    private readonly IAuditLogService _auditLogService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -45,6 +48,7 @@ public sealed class ChangeDealStageCommandHandler : IRequestHandler<ChangeDealSt
         IDealStageHistoryRepository dealStageHistoryRepository,
         IWarehouseDealCompletionService warehouseDealCompletionService,
         IBonusDealCompletionService bonusDealCompletionService,
+        IAuditLogService auditLogService,
         IDateTimeProvider dateTimeProvider,
         IUnitOfWork unitOfWork)
     {
@@ -55,6 +59,7 @@ public sealed class ChangeDealStageCommandHandler : IRequestHandler<ChangeDealSt
         _dealStageHistoryRepository = dealStageHistoryRepository;
         _warehouseDealCompletionService = warehouseDealCompletionService;
         _bonusDealCompletionService = bonusDealCompletionService;
+        _auditLogService = auditLogService;
         _dateTimeProvider = dateTimeProvider;
         _unitOfWork = unitOfWork;
     }
@@ -121,6 +126,31 @@ public sealed class ChangeDealStageCommandHandler : IRequestHandler<ChangeDealSt
             now);
 
         await _dealStageHistoryRepository.AddAsync(history, cancellationToken);
+        await _auditLogService.LogAsync(
+            organizationId,
+            currentUserId,
+            "Deals",
+            AuditAction.StageChange,
+            "Deal",
+            deal.Id,
+            $"Deal {deal.Id} stage was changed",
+            new
+            {
+                StageId = oldStageId,
+                StageName = currentStage.Name,
+                currentStage.IsFinal,
+                currentStage.IsSuccessful
+            },
+            new
+            {
+                StageId = newStage.Id,
+                StageName = newStage.Name,
+                newStage.IsFinal,
+                newStage.IsSuccessful,
+                deal.ClosedAt
+            },
+            cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         var stageHistory = deal.StageHistory.Concat([history]).ToList();

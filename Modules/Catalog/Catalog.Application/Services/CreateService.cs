@@ -1,3 +1,5 @@
+using Audit.Application.Abstractions.Services;
+using Audit.Domain.Enums;
 using BuildingBlocks.Application.Abstractions.Auth;
 using BuildingBlocks.Application.Abstractions.Persistence;
 using BuildingBlocks.Application.Abstractions.Time;
@@ -45,6 +47,7 @@ public sealed class CreateServiceCommandHandler : IRequestHandler<CreateServiceC
     private readonly ICurrentUserService _currentUserService;
     private readonly ICategoryRepository _categoryRepository;
     private readonly IServiceRepository _serviceRepository;
+    private readonly IAuditLogService _auditLogService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -52,12 +55,14 @@ public sealed class CreateServiceCommandHandler : IRequestHandler<CreateServiceC
         ICurrentUserService currentUserService,
         ICategoryRepository categoryRepository,
         IServiceRepository serviceRepository,
+        IAuditLogService auditLogService,
         IDateTimeProvider dateTimeProvider,
         IUnitOfWork unitOfWork)
     {
         _currentUserService = currentUserService;
         _categoryRepository = categoryRepository;
         _serviceRepository = serviceRepository;
+        _auditLogService = auditLogService;
         _dateTimeProvider = dateTimeProvider;
         _unitOfWork = unitOfWork;
     }
@@ -86,6 +91,28 @@ public sealed class CreateServiceCommandHandler : IRequestHandler<CreateServiceC
             _dateTimeProvider.UtcNow);
 
         await _serviceRepository.AddAsync(service, cancellationToken);
+        await _auditLogService.LogAsync(
+            organizationId,
+            _currentUserService.UserId,
+            "Catalog",
+            AuditAction.Create,
+            "Service",
+            service.Id,
+            $"Service {service.Name} was created",
+            oldValues: null,
+            newValues: new
+            {
+                service.Name,
+                service.CategoryId,
+                service.Price,
+                service.BonusType,
+                service.BonusValue,
+                service.DiscountType,
+                service.DiscountValue,
+                service.IsActive
+            },
+            cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return service.ToResponse();

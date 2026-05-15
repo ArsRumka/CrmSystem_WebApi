@@ -1,3 +1,5 @@
+using Audit.Application.Abstractions.Services;
+using Audit.Domain.Enums;
 using BuildingBlocks.Application.Abstractions.Auth;
 using BuildingBlocks.Application.Abstractions.Persistence;
 using BuildingBlocks.Application.Abstractions.Time;
@@ -30,6 +32,7 @@ public sealed class RejectContactRequestCommandHandler
     private readonly ICurrentUserService _currentUserService;
     private readonly IPermissionService _permissionService;
     private readonly IChatContactRequestRepository _contactRequestRepository;
+    private readonly IAuditLogService _auditLogService;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ChatResponseFactory _responseFactory;
@@ -38,6 +41,7 @@ public sealed class RejectContactRequestCommandHandler
         ICurrentUserService currentUserService,
         IPermissionService permissionService,
         IChatContactRequestRepository contactRequestRepository,
+        IAuditLogService auditLogService,
         IDateTimeProvider dateTimeProvider,
         IUnitOfWork unitOfWork,
         ChatResponseFactory responseFactory)
@@ -45,6 +49,7 @@ public sealed class RejectContactRequestCommandHandler
         _currentUserService = currentUserService;
         _permissionService = permissionService;
         _contactRequestRepository = contactRequestRepository;
+        _auditLogService = auditLogService;
         _dateTimeProvider = dateTimeProvider;
         _unitOfWork = unitOfWork;
         _responseFactory = responseFactory;
@@ -70,7 +75,21 @@ public sealed class RejectContactRequestCommandHandler
             throw new ConflictException("Only pending contact requests can be rejected");
         }
 
+        var oldSnapshot = ChatAuditSnapshots.ContactRequest(contactRequest);
+
         contactRequest.Reject(request.Reason, userId, _dateTimeProvider.UtcNow);
+        await _auditLogService.LogAsync(
+            organizationId,
+            userId,
+            "Chat",
+            AuditAction.Reject,
+            "ChatContactRequest",
+            contactRequest.Id,
+            $"Chat contact request {contactRequest.Id} was rejected",
+            oldSnapshot,
+            ChatAuditSnapshots.ContactRequest(contactRequest),
+            cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return await _responseFactory.CreateContactRequestResponseAsync(contactRequest, cancellationToken);

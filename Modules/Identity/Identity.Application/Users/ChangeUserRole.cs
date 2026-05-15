@@ -1,3 +1,5 @@
+using Audit.Application.Abstractions.Services;
+using Audit.Domain.Enums;
 using BuildingBlocks.Application.Abstractions.Auth;
 using BuildingBlocks.Application.Abstractions.Persistence;
 using BuildingBlocks.Application.Exceptions;
@@ -28,6 +30,7 @@ public sealed class ChangeUserRoleCommandHandler : IRequestHandler<ChangeUserRol
     private readonly IPermissionService _permissionService;
     private readonly IUserRepository _userRepository;
     private readonly IRoleRepository _roleRepository;
+    private readonly IAuditLogService _auditLogService;
     private readonly IUnitOfWork _unitOfWork;
 
     public ChangeUserRoleCommandHandler(
@@ -35,12 +38,14 @@ public sealed class ChangeUserRoleCommandHandler : IRequestHandler<ChangeUserRol
         IPermissionService permissionService,
         IUserRepository userRepository,
         IRoleRepository roleRepository,
+        IAuditLogService auditLogService,
         IUnitOfWork unitOfWork)
     {
         _currentUserService = currentUserService;
         _permissionService = permissionService;
         _userRepository = userRepository;
         _roleRepository = roleRepository;
+        _auditLogService = auditLogService;
         _unitOfWork = unitOfWork;
     }
 
@@ -71,7 +76,30 @@ public sealed class ChangeUserRoleCommandHandler : IRequestHandler<ChangeUserRol
             throw new ForbiddenException("Role belongs to another organization");
         }
 
+        var oldSnapshot = IdentityAuditSnapshots.User(user);
+        var oldRoleId = user.RoleId;
+
         user.ChangeRole(role.Id);
+        await _auditLogService.LogAsync(
+            organizationId,
+            currentUserId,
+            "Users",
+            AuditAction.Update,
+            "User",
+            user.Id,
+            $"User {user.Name} role was changed",
+            oldSnapshot,
+            new
+            {
+                user.Name,
+                user.Email,
+                OldRoleId = oldRoleId,
+                NewRoleId = user.RoleId,
+                user.IsActive,
+                user.IsEmailConfirmed
+            },
+            cancellationToken);
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return new SuccessResponse(true);
