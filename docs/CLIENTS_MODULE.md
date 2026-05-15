@@ -312,7 +312,19 @@ Useful validation checks:
 - invalid enum values fail validation;
 - overlong strings fail validation.
 
-## 14. What Clients module intentionally does not include
+## 14. Audit integration
+
+Clients create/update/deactivate handlers are integrated with Audit Core.
+
+Audited events:
+
+- client created;
+- client updated;
+- client deactivated.
+
+Audit snapshots include basic card fields such as name, email, phone, status, source, `AllowMarketingEmails` and `IsActive`. Client notes are not logged.
+
+## 15. What Clients module intentionally does not include
 
 Clients module intentionally does not include:
 
@@ -321,7 +333,6 @@ Clients module intentionally does not include:
 - email confirmation for clients;
 - client mailing campaigns, которые реализованы отдельным `Email` module;
 - chat, который реализован отдельным `Chat` module через `ClientId`;
-- audit;
 - catalog;
 - client bonus balances;
 - LastPurchaseAt;

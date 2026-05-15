@@ -329,7 +329,19 @@ DELETE /api/catalog/services/{id}
 
 `DELETE` endpoints выполняют soft delete и возвращают `204 No Content`.
 
-## 12. Что Catalog намеренно не включает
+## 12. Audit integration
+
+Catalog category/product/service create, update and deactivate handlers are integrated with Audit Core.
+
+Audited events:
+
+- category created/updated/deactivated;
+- product created/updated/deactivated;
+- service created/updated/deactivated.
+
+Audit snapshots include selected safe fields such as name, category/parent id, price, discount/bonus rule summary and `IsActive`.
+
+## 13. Что Catalog намеренно не включает
 
 Catalog module намеренно не реализует:
 
@@ -339,13 +351,12 @@ Catalog module намеренно не реализует:
 - organization discount settings;
 - stock/warehouse logic inside Catalog;
 - Chat, который реализован отдельным `Chat` module;
-- Audit;
 - полноценный Promotions module;
 - promo codes;
 - date-based promotions;
 - frontend UI.
 
-## 13. Связанные модули и текущий статус
+## 14. Связанные модули и текущий статус
 
 После Catalog уже реализованы:
 
@@ -353,7 +364,8 @@ Catalog module намеренно не реализует:
 - `Warehouse Core`;
 - `Bonus Core`;
 - `Returns Core inside Deals`;
-- `Chat Core with SignalR`.
+- `Chat Core with SignalR`;
+- `Audit Core`.
 
 Связи:
 
@@ -362,4 +374,5 @@ Catalog module намеренно не реализует:
 - Warehouse Core ведёт остатки только для Catalog Product;
 - inactive Catalog Product разрешён для складских операций, если Product существует в той же организации;
 - Bonus Core использует `BonusType`/`BonusValue` из Product, Service и Category для rule resolution;
-- Bonus Core наследует rule по цепочке Product/Service -> Category -> parent categories -> BonusSettings.
+- Bonus Core наследует rule по цепочке Product/Service -> Category -> parent categories -> BonusSettings;
+- Audit Core фиксирует create/update/deactivate событий Category, Product и Service через manual audit calls.

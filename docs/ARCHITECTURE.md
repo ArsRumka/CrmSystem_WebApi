@@ -89,6 +89,7 @@ SignalR client
 - `Bonus` - Core бонусной системы.
 - `Chat` - Core коммуникаций с REST API и SignalR.
 - `Email` - Core клиентских email-рассылок, SMTP-настроек и automation.
+- `Audit` - Core журналирования ключевых бизнес-действий.
 
 Будущие CRM-модули должны повторять этот стиль, но не создавать собственные DbContext и отдельные базы.
 
@@ -257,6 +258,35 @@ Returns Core живёт внутри Deals module. Отдельного Returns 
 
 Email является примером модуля с внешними side effects: отправка писем выполняется через реальный SMTP. Поэтому настройки, failure behavior и credential security нужно документировать явно.
 
+## Audit как cross-cutting module
+
+`Audit` реализован как отдельный core-модуль для журнала ключевых бизнес-действий:
+
+- `Audit.Domain` содержит `AuditLog` и `AuditAction`;
+- `Audit.Application` содержит read-only MediatR queries, DTO, `IAuditLogRepository` и `IAuditLogService`;
+- `Audit.Infrastructure` содержит EF configuration, repository и реализацию `IAuditLogService`;
+- `Audit.Presentation` содержит thin REST controller для read-only API.
+
+Архитектурные детали Audit:
+
+- модуль использует общий `Infrastructure.Persistence.ApplicationDbContext`;
+- собственного `AuditDbContext` нет;
+- EF configurations подключены через `IEfConfigurationAssemblyProvider` из `AddAuditInfrastructure()`;
+- migration `AddAuditCoreModule` создана в `Infrastructure/Migrations`;
+- permissions используют existing Identity permission system через module code `Audit`;
+- public API только read-only: `GET /api/audit/logs` и `GET /api/audit/logs/{id}`;
+- business modules reference only `Audit.Application`;
+- `Audit.Application` не зависит от business modules;
+- `Audit.Infrastructure` записывает `AuditLogs` через shared `ApplicationDbContext`;
+- `AuditLogService` не вызывает `SaveChangesAsync`;
+- audit entries сохраняются в transaction вызывающего handler через общий `IUnitOfWork`;
+- внешних FK/navigation на Identity, Organization, Clients, Catalog, Deals, Warehouse, Bonus, Chat или Email нет;
+- связи с business modules хранятся через Guid/string: `OrganizationId`, `UserId`, `EntityId`, `ModuleCode`, `EntityName`;
+- используются manual audit calls in selected handlers вместо EF interceptor;
+- automatic audit всех EF changes намеренно не реализован.
+
+Audit является cross-cutting module, но не нарушает direction dependencies: другие модули видят только application abstraction `IAuditLogService`, а запись в БД остаётся в инфраструктурном слое Audit.
+
 ## SignalR
 
 REST API по-прежнему обрабатывается через controllers -> MediatR -> handlers. Realtime communication для Chat идёт через:
@@ -315,6 +345,7 @@ services.AddSingleton<IEfConfigurationAssemblyProvider>(
 - `Bonus.Infrastructure.Configurations`.
 - `Chat.Infrastructure.Configurations`.
 - `Email.Infrastructure.Configurations`.
+- `Audit.Infrastructure.Configurations`.
 
 При добавлении нового модуля его EF configurations нужно регистрировать в DI внутри `{Module}.Infrastructure`. Не добавлять reference из `Infrastructure` на `{Module}.Infrastructure`, не использовать строковый `Assembly.Load` и не создавать отдельный DbContext.
 
@@ -336,6 +367,7 @@ Infrastructure/Migrations
 - `AddDealsReturnsCore`
 - `AddChatCoreModule`
 - `AddEmailCampaignsCoreModule`
+- `AddAuditCoreModule`
 
 Команды:
 
@@ -386,6 +418,7 @@ dotnet ef migrations list --project Infrastructure --startup-project CrmSystem
 - `IEmailCampaignRepository`
 - `IEmailCampaignRecipientRepository`
 - `IEmailAutomationRuleRepository`
+- `IAuditLogRepository`
 
 Неправильно:
 
@@ -483,6 +516,10 @@ Email endpoints используют:
 - `Email / Update`
 - `Email / Delete`
 
+Audit endpoints используют:
+
+- `Audit / Read`
+
 Системный администратор платформы не является пользователем организации и не получает tenant permissions.
 
 ## Правила зависимостей
@@ -505,6 +542,8 @@ Returns внутри Deals является примером cross-module lifecy
 Chat является примером модуля с межорганизационным доступом без внешних FK: он хранит `OwnerOrganizationId`, `OrganizationId`, `UserId`, `ClientId`, `DealId`, `SenderOrganizationId` и `SenderUserId` как Guid, а межорганизационный доступ ограничивает через `ChatConversationOrganization` и `ChatParticipant`.
 
 Email является примером модуля с внешними integration lookups и side effects без внешних FK: он хранит `OrganizationId`, `CreatedByUserId`, `ClientId` и `TemplateId` как Guid references, выбирает inactive clients через Clients/Deals tables в `Email.Infrastructure`, а письма отправляет через SMTP settings организации.
+
+Audit является примером cross-cutting module без внешних FK: он хранит `OrganizationId`, nullable `UserId`, nullable `EntityId`, `ModuleCode` и `EntityName`, принимает записи через `IAuditLogService` из `Audit.Application`, а `Audit.Infrastructure` добавляет `AuditLog` в shared `ApplicationDbContext` без собственного save.
 
 ## Tenant scoping
 
@@ -540,17 +579,52 @@ Email tenant scoping:
 - `ClientId`, `CreatedByUserId` и automation lookups являются Guid references без внешних FK;
 - inactive-client automation не использует `Client.Status` как обязательный фильтр и требует successful final deal.
 
-## Testing Layer planned
+Audit tenant scoping:
 
-API integration tests запланированы как отдельный тестовый слой после Audit Core.
+- `AuditLog.OrganizationId` обязателен;
+- read-only API всегда фильтрует logs по current organization;
+- `UserId` nullable для system/background операций;
+- `EntityId` хранится как Guid reference only, без FK на business entity.
 
-Ожидаемые правила:
+## Testing Layer
 
-- тесты должны проверять реальные API scenarios через HTTP endpoints;
-- тестовая БД должна быть отделена от dev/prod БД;
-- миграции должны применяться к тестовой БД отдельно;
-- SMTP в тестах должен заменяться fake/test sender, чтобы integration tests не отправляли реальные письма;
-- SignalR scenarios можно проверять отдельно от обычных REST сценариев.
+Testing Layer реализован как отдельный архитектурный слой в `tests/CrmSystem.ApiTests`. Он не входит в production runtime и не меняет production business logic.
+
+Архитектурная роль слоя:
+
+- проверять application boundary через HTTP API;
+- запускать WebApi через `WebApplicationFactory<Program>`;
+- выполнять реальные HTTP-запросы через `HttpClient`;
+- использовать PostgreSQL Testcontainers вместо local dev/prod database;
+- применять реальные EF migrations через `ApplicationDbContext.Database.MigrateAsync()`;
+- сбрасывать данные между тестами через Respawn;
+- сохранять seed/system tables, необходимые для Identity modules/system admin;
+- заменять внешние side effects fake-сервисами.
+
+Email side effects в Testing Layer:
+
+- `IOrganizationSmtpEmailSender` заменяется на fake implementation;
+- общий `IEmailSender` заменяется на fake implementation;
+- `EmailAutomationHostedService` удаляется из test DI;
+- `EmailAutomation:IsEnabled=false`;
+- real SMTP не используется в API integration tests.
+
+Time-dependent scenarios используют `TestClock`, который заменяет `IDateTimeProvider`.
+
+Фактический coverage первого Testing Layer:
+
+- Identity/Auth permissions;
+- Clients;
+- Catalog;
+- Warehouse;
+- Deals + Warehouse + Bonus;
+- Returns Core inside Deals;
+- Bonus;
+- Chat REST и inter-organization contact request flow;
+- Email campaigns и manual automation run;
+- Audit log creation и sensitive data absence.
+
+Full SignalR realtime suite пока остаётся future work. В первой итерации Chat проверяется через REST/API-focused scenarios.
 
 ## Deployment planned
 
@@ -571,6 +645,7 @@ Dockerization и Nginx reverse proxy запланированы отдельно
 - Не создавать `BonusDbContext`.
 - Не создавать `ChatDbContext`.
 - Не создавать `EmailDbContext`.
+- Не создавать `AuditDbContext`.
 - Не переносить `ApplicationDbContext` из `Infrastructure/Persistence`.
 - Не переносить migrations из `Infrastructure/Migrations`.
 - Не создавать отдельные базы данных для модулей.

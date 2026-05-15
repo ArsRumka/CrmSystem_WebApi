@@ -418,6 +418,21 @@ Permission:{ModuleCode}:{Action}
 [RequirePermission("Users", PermissionAction.Create)]
 ```
 
+## Audit integration
+
+Safe tenant-scoped user, role and permission management handlers are integrated with Audit Core where applicable.
+
+Audited events:
+
+- user created;
+- user role changed;
+- user deactivated;
+- role created;
+- role permissions updated;
+- role deleted.
+
+Public authentication and token flows are not audited as business events. Organization request approval/rejection and public organization registration may remain skipped when unsafe because they involve activation keys/tokens or system/public tenant context.
+
 ## Modules
 
 Endpoint:
@@ -440,9 +455,9 @@ Seeded modules:
 - `Audit`
 - `Settings`
 
-`Clients`, `Catalog`, `Deals`, `Warehouse`, `Bonus`, `Chat` и `Email` уже реализованы как отдельные CRM-модули или MVP/Core-модули. `Chat` использует seeded module code `Chat` для REST permissions и application-level checks в SignalR hub. `Email` использует seeded module code `Email` для settings, templates, campaigns и automation endpoints. `Audit` пока является seeded module code для будущей бизнес-функции.
+`Clients`, `Catalog`, `Deals`, `Warehouse`, `Bonus`, `Chat`, `Email` и `Audit` уже реализованы как отдельные CRM-модули, MVP/Core-модули или cross-cutting Core-модули. `Chat` использует seeded module code `Chat` для REST permissions и application-level checks в SignalR hub. `Email` использует seeded module code `Email` для settings, templates, campaigns и automation endpoints. `Audit` использует seeded module code `Audit` для read-only audit endpoints.
 
-Identity seed idempotently backfill-ит полный доступ к `Email` для существующих tenant ролей `Admin`. Обычным ролям Email permissions автоматически не выдаются.
+Identity seed idempotently backfill-ит полный доступ к `Email` для существующих tenant ролей `Admin`. `Audit` module code уже seed-ится как системный модуль, но доступ к audit endpoints всё равно требует `Audit/Read`. Обычным ролям Email/Audit permissions автоматически не выдаются.
 
 ## Как тестировать через Swagger
 

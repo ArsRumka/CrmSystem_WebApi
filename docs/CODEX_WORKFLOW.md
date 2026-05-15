@@ -12,9 +12,10 @@
 8. Если задача связана с Bonus, прочитать `docs/BONUS_MODULE.md`.
 9. Если задача связана с Chat или SignalR, прочитать `docs/CHAT_MODULE.md`.
 10. Если задача связана с Email Campaigns, SMTP или рассылками, прочитать `docs/EMAIL_MODULE.md`.
-11. Если задача про дальнейшую разработку, прочитать `docs/DEVELOPMENT_PLAN.md`.
-12. Проверить `git status --short`.
-13. Быстро осмотреть затрагиваемые проекты и не делать предположений без чтения кода.
+11. Если задача связана с Audit или журналированием действий, прочитать `docs/AUDIT_MODULE.md`.
+12. Если задача про дальнейшую разработку, прочитать `docs/DEVELOPMENT_PLAN.md`.
+13. Проверить `git status --short`.
+14. Быстро осмотреть затрагиваемые проекты и не делать предположений без чтения кода.
 
 ## Какие файлы читать в первую очередь
 
@@ -136,6 +137,18 @@ Email:
 - `Modules/Email/Email.Presentation/Controllers`
 - `Infrastructure/Migrations/20260514140401_AddEmailCampaignsCoreModule.cs`
 
+Audit:
+
+- `Modules/Audit/Audit.Domain/Entities`
+- `Modules/Audit/Audit.Domain/Enums`
+- `Modules/Audit/Audit.Application/Logs`
+- `Modules/Audit/Audit.Application/Abstractions`
+- `Modules/Audit/Audit.Infrastructure/Configurations`
+- `Modules/Audit/Audit.Infrastructure/Repositories`
+- `Modules/Audit/Audit.Infrastructure/Services`
+- `Modules/Audit/Audit.Presentation/Controllers`
+- `Infrastructure/Migrations/20260514193150_AddAuditCoreModule.cs`
+
 ## Как составлять план
 
 Перед изменениями:
@@ -152,6 +165,14 @@ Email:
 2. Application layer: commands/queries/handlers/validators.
 3. Infrastructure services + Presentation + WebApi wiring.
 4. Проверка сценариев и документация.
+
+Для cross-cutting module работать особенно осторожно:
+
+1. Сначала создать module foundation: domain, abstractions, infrastructure, presentation и DI wiring.
+2. Затем добавлять интеграции по приоритету и небольшими группами handlers.
+3. Не переписывать бизнес-логику ради интеграции.
+4. Не добавлять `SaveChangesAsync` в cross-cutting service.
+5. Фиксировать список реально интегрированных handlers в отчёте.
 
 ## Как реализовывать новый модуль
 
@@ -246,6 +267,16 @@ Modules or root-level module projects
 - `docs/CHAT_MODULE.md`, если там есть roadmap после Chat или email notifications notes;
 - `docs/DATABASE_OVERVIEW.md`, если файл существует.
 
+Пример: Audit Core обновляет:
+
+- `docs/AUDIT_MODULE.md`;
+- `docs/DEVELOPMENT_PLAN.md`;
+- `docs/CODEX_CONTEXT.md`;
+- `docs/ARCHITECTURE.md`;
+- `docs/CODEX_WORKFLOW.md`;
+- профильные документы модулей, handlers которых получили audit calls;
+- `docs/DATABASE_OVERVIEW.md`, если файл существует.
+
 В документации обязательно фиксировать:
 
 - endpoints;
@@ -273,6 +304,28 @@ Modules or root-level module projects
 - failure behavior;
 - security handling for credentials;
 - test strategy.
+
+После реализации Audit дополнительно проверить и зафиксировать:
+
+- sensitive data не попадает в audit logs;
+- chat message text не логируется;
+- email body и rendered body не логируются;
+- passwords, tokens, SMTP password и authorization headers не логируются;
+- `AuditLogService` не вызывает `SaveChangesAsync`;
+- audit integrations сохраняются через существующий UnitOfWork вызывающего handler.
+
+Testing Layer tasks:
+
+- Testing Layer changes должны идти отдельной итерацией.
+- Не смешивать tests с business module changes.
+- Не менять production business logic ради прохождения тестов без отдельного решения.
+- Для API integration tests использовать PostgreSQL/Testcontainers, а не EF InMemory/SQLite.
+- API integration tests должны ходить в реальные HTTP endpoints через `HttpClient`.
+- В тестах запрещена реальная SMTP-отправка.
+- Hosted services с external side effects должны отключаться или заменяться fake implementations.
+- Если Docker недоступен, фиксировать это в отчёте.
+- После реализации tests обязательно запускать `dotnet build CrmSystem.slnx`.
+- После реализации tests обязательно запускать `dotnet test tests/CrmSystem.ApiTests/CrmSystem.ApiTests.csproj`.
 
 Deployment tasks:
 

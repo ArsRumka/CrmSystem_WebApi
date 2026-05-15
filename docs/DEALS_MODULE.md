@@ -27,7 +27,7 @@ Infrastructure/Migrations/20260427004819_AddDealsMvpModule.Designer.cs
 Infrastructure/Migrations/20260507121737_AddDealsReturnsCore.cs
 ```
 
-После реализации Warehouse Core, Bonus Core и Returns Core модуль Deals интегрирован со складским списанием, бонусным списанием/начислением и возвратами по successful final deals.
+После реализации Warehouse Core, Bonus Core, Returns Core и Audit Core модуль Deals интегрирован со складским списанием, бонусным списанием/начислением, возвратами по successful final deals и журналированием ключевых действий.
 
 Returns - не отдельный модуль. Это расширение Deals module, которое закрывает базовый жизненный цикл сделки:
 
@@ -38,7 +38,7 @@ Returns - не отдельный модуль. Это расширение Deal
 - Warehouse `Return` movement;
 - Bonus `Refund` / `CorrectionDecrease`.
 
-После Returns Core будущей Deals-related итерацией остаётся Audit.
+Audit Core фиксирует create/update/stage change/deactivate событий Deals и create/update/complete/cancel событий DealReturn через manual audit calls.
 
 Email Campaigns Core использует Deals read model для inactive-client automation: клиент считается кандидатом только при наличии хотя бы одной active deal в successful final stage с `ClosedAt`, и latest successful final deal должна быть старше настроенного `InactivityDays`. Внешних FK/navigation между Email и Deals нет.
 
@@ -439,6 +439,26 @@ Bonus behavior:
 - `Reason` является информационным полем и не парсится для бизнес-логики;
 - если на счёте клиента недостаточно бонусов для отката начисления, completion возврата завершается `ConflictException`.
 
+## 5.4 Audit integration
+
+Deals handlers are integrated with Audit Core through `IAuditLogService`.
+
+Audited Deal events:
+
+- deal created;
+- deal updated;
+- deal stage changed;
+- deal deactivated.
+
+Audited DealReturn events:
+
+- deal return created;
+- deal return updated;
+- deal return completed;
+- deal return cancelled.
+
+Stage change audit stores old/new stage ids and names where available. Completed return audit stores return summary values such as total amount, money amount, bonus points returned and reversed accrual. Free-form notes/reasons are not logged as audit details.
+
 ## 6. EF/database details
 
 EF configurations находятся в:
@@ -630,10 +650,9 @@ Deals Core intentionally does not include:
 - payment refunds;
 - promo codes;
 - analytics;
-- chat, который реализован отдельным `Chat` module через `DealId`;
-- audit events.
+- chat, который реализован отдельным `Chat` module через `DealId`.
 
-Returns Core реализован внутри Deals. Deals всё ещё не включает Audit events и не занимается payment refunds, invoices или supplier returns.
+Returns Core реализован внутри Deals. Deals не занимается payment refunds, invoices или supplier returns.
 
 ## 11. Verification
 

@@ -370,6 +370,25 @@ Migration:
 20260507173218_AddChatCoreModule
 ```
 
+## Audit integration
+
+Chat conversation, participant and contact request lifecycle handlers are integrated with Audit Core.
+
+Audited events:
+
+- conversation created;
+- conversation deleted;
+- participant added;
+- participant removed;
+- contact request created;
+- contact request approved;
+- contact request rejected;
+- contact request cancelled.
+
+Chat messages are not audited. Typing/read events and message edit/delete events are not audited. Audit records must not contain chat message text or contact request message text.
+
+Chat REST endpoints and inter-organization contact request flow are covered by API integration tests. Full SignalR realtime testing is future work.
+
 ## Out of scope / Future scope
 
 Не реализовано в Chat Core:
@@ -384,7 +403,6 @@ Migration:
 - moderation;
 - organization blacklist;
 - email notifications;
-- audit integration;
 - frontend UI.
 
 Email Campaigns Core уже реализован отдельным `Email` module. Email notifications по-прежнему не входят в Chat Core.

@@ -333,6 +333,25 @@ Security rules:
 - campaigns используют только organization SMTP settings;
 - console fallback не используется как замена SMTP.
 
+## Audit integration
+
+Email settings, template, campaign and automation handlers/services are integrated with Audit Core where a safe existing save point is available.
+
+Audited events:
+
+- email settings updated;
+- template created;
+- template updated;
+- template deactivated;
+- manual campaign created;
+- campaign sent;
+- automation rule updated;
+- automation run.
+
+SMTP passwords, `PasswordEncrypted`, email template body and rendered campaign body are not logged. Individual recipient sending is not audited separately; recipient statuses remain stored in `EmailCampaignRecipient`.
+
+Email module is covered by API integration tests with fake SMTP sender. Real SMTP is not used in tests. `EmailAutomationHostedService` is disabled in tests; automation is tested through manual run endpoint.
+
 ## Out of scope / Future scope
 
 Не реализовано в Email Core:
@@ -346,5 +365,4 @@ Security rules:
 - A/B testing;
 - arbitrary scheduled campaigns;
 - external provider APIs;
-- frontend UI;
-- audit integration.
+- frontend UI.

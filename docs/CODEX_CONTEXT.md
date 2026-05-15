@@ -60,7 +60,12 @@ Solution: `CrmSystem.slnx`.
 - `Email.Application` - MediatR use cases, validators, DTO, repository/service abstractions Email.
 - `Email.Infrastructure` - EF configurations, repositories, SMTP sender, Data Protection password protector, lookup services и hosted automation Email.
 - `Email.Presentation` - thin API controllers Email.
+- `Audit.Domain` - доменная модель Audit.
+- `Audit.Application` - MediatR read-only queries, validators, DTO, repository/service abstractions Audit.
+- `Audit.Infrastructure` - EF configuration, repository и `IAuditLogService` implementation Audit.
+- `Audit.Presentation` - thin API controller Audit.
 - `CrmSystem` - ASP.NET Core Web API, точка входа приложения.
+- `CrmSystem.ApiTests` - отдельный xUnit-проект API integration tests в `tests/CrmSystem.ApiTests`.
 
 ## Ключевые правила
 
@@ -80,11 +85,15 @@ Solution: `CrmSystem.slnx`.
 - Все бизнес-данные должны быть tenant-scoped через `OrganizationId`.
 - Chat является особым случаем: inter-organization conversations связаны с двумя организациями, а доступ определяется explicit participant membership.
 - Email Campaigns использует organization SMTP settings, хранит SMTP password encrypted и не создаёт внешних FK/navigation на Identity, Clients или Deals.
+- Audit использует только manual audit calls в selected handlers, без EF interceptor и без автоматического логирования всех EF changes.
+- Audit хранит связи с другими модулями через Guid/string, не создаёт внешних FK/navigation и сохраняется через общий UnitOfWork вызывающего handler.
+- Testing Layer использует реальные HTTP endpoints, real EF migrations, PostgreSQL Testcontainers, Respawn, fake SMTP и `TestClock`.
+- В API integration tests real SMTP отключён и заменён fake implementations; `EmailAutomationHostedService` отключается в test factory.
 - Identity уже реализован, не переписывать его без необходимости.
 
 ## Current status
 
-Реализованы и build-tested core-модули:
+Реализованы core-модули:
 
 - **Identity** - implemented and tested.
 - **Clients** - implemented and tested.
@@ -95,11 +104,13 @@ Solution: `CrmSystem.slnx`.
 - **Returns Core inside Deals** - implemented.
 - **Chat Core with SignalR** - implemented.
 - **Email Campaigns Core** - implemented.
+- **Audit Core** - implemented.
+- **Testing Layer / API Integration Tests** - implemented, 16/16 tests passed.
 
 Готов фундамент проекта:
 
 - общий `ApplicationDbContext`;
-- миграции `InitialCreate`, `AddIdentityFoundation`, `AddClientsModule`, `AddCatalogModule`, `AddDealsMvpModule`, `AddWarehouseCoreModule`, `20260506131632_AddBonusCoreModule`, `20260507121737_AddDealsReturnsCore`, `20260507173218_AddChatCoreModule`, `20260514140401_AddEmailCampaignsCoreModule`;
+- миграции `InitialCreate`, `AddIdentityFoundation`, `AddClientsModule`, `AddCatalogModule`, `AddDealsMvpModule`, `AddWarehouseCoreModule`, `20260506131632_AddBonusCoreModule`, `20260507121737_AddDealsReturnsCore`, `20260507173218_AddChatCoreModule`, `20260514140401_AddEmailCampaignsCoreModule`, `20260514193150_AddAuditCoreModule`;
 - общий `IUnitOfWork`;
 - общие abstractions: current user, email sender, time provider;
 - common application exceptions;
@@ -108,6 +119,7 @@ Solution: `CrmSystem.slnx`.
 - permission-based authorization;
 - Swagger Bearer token support;
 - Identity seed на старте приложения.
+- API integration tests through `tests/CrmSystem.ApiTests`.
 
 ## Реализованные модули
 
@@ -380,6 +392,58 @@ Solution: `CrmSystem.slnx`.
 - automatic emails требуют хотя бы одну successful final deal;
 - `InactivityDays` и `RepeatAfterDays` являются настройками организации.
 
+### Audit Core
+
+Реализован cross-cutting модуль **Audit Core** после Email Campaigns Core:
+
+- проекты `Audit.Domain`, `Audit.Application`, `Audit.Infrastructure`, `Audit.Presentation`;
+- сущность `AuditLog`;
+- enum `AuditAction`;
+- read-only API для просмотра audit logs;
+- internal write API через `IAuditLogService`;
+- repository interface `IAuditLogRepository` и implementation `AuditLogRepository`;
+- EF configuration `AuditLogConfiguration`;
+- thin API controller `AuditLogsController`;
+- permission через existing Identity permission system;
+- migration `20260514193150_AddAuditCoreModule` в `Infrastructure/Migrations`.
+
+Важные правила Audit:
+
+- используется общий `ApplicationDbContext`;
+- `AuditDbContext` не создавался;
+- Audit EF configurations подключены через `IEfConfigurationAssemblyProvider`;
+- внешних FK/navigation на Identity User, Identity Organization, Clients, Catalog, Deals, Warehouse, Bonus, Chat или Email нет;
+- связи с другими модулями хранятся как Guid/string: `OrganizationId`, `UserId`, `EntityId`, `ModuleCode`, `EntityName`;
+- Audit uses manual audit calls only;
+- EF interceptor не используется;
+- `AuditLogService` не вызывает `SaveChangesAsync`;
+- audit записи сохраняются в той же транзакции, что и бизнес-действие, через общий `IUnitOfWork` handler;
+- API для пользователей read-only: public create/update/delete endpoints отсутствуют;
+- `OldValuesJson` и `NewValuesJson` содержат только небольшие sanitized snapshots;
+- chat message text, email body, passwords, tokens и SMTP password не логируются.
+
+### Testing Layer / API Integration Tests
+
+Реализован отдельный Testing Layer после Audit Core:
+
+- тестовый проект `tests/CrmSystem.ApiTests`;
+- xUnit;
+- `Microsoft.AspNetCore.Mvc.Testing`;
+- `WebApplicationFactory<Program>`;
+- реальные HTTP endpoints через `HttpClient`;
+- PostgreSQL Testcontainers (`postgres:16-alpine`);
+- real EF migrations через `ApplicationDbContext.Database.MigrateAsync()`;
+- Respawn reset между тестами;
+- fake `IOrganizationSmtpEmailSender` для email campaigns;
+- fake `IEmailSender` для Identity email flows;
+- `TestClock` вместо runtime `IDateTimeProvider`;
+- `EmailAutomationHostedService` отключён в тестах;
+- `EmailAutomation:IsEnabled=false` в test configuration.
+
+Покрытие: Identity/Auth, Clients, Catalog, Warehouse, Deals + Warehouse + Bonus, Returns, Bonus, Chat REST/inter-org flow, Email campaigns/automation и Audit.
+
+Последний результат: `dotnet test tests/CrmSystem.ApiTests/CrmSystem.ApiTests.csproj --logger "console;verbosity=minimal"` passed 16/16, failed 0, skipped 0. `dotnet build CrmSystem.slnx --no-restore` succeeded with 0 warnings and 0 errors.
+
 ## Seeded module codes
 
 Коды CRM-модулей seed-ятся как системные `Module` для прав доступа:
@@ -396,9 +460,9 @@ Solution: `CrmSystem.slnx`.
 - `Audit`
 - `Settings`
 
-`Clients`, `Catalog`, `Deals`, `Warehouse`, `Bonus`, `Chat` и `Email` уже реализованы как бизнес-модули или MVP/Core-модули. `Deals` реализован как MVP/Core с Returns Core inside Deals. `Warehouse` и `Bonus` реализованы как Core и поддерживают return integration через `SourceReturnId`. `Chat` реализован как Core with SignalR. `Email` реализован как Core module для SMTP-настроек, шаблонов, ручных и автоматических рассылок. `Audit` пока является permission module code для будущей бизнес-функции.
+`Clients`, `Catalog`, `Deals`, `Warehouse`, `Bonus`, `Chat`, `Email` и `Audit` уже реализованы как бизнес-модули, MVP/Core-модули или cross-cutting Core-модули. `Deals` реализован как MVP/Core с Returns Core inside Deals. `Warehouse` и `Bonus` реализованы как Core и поддерживают return integration через `SourceReturnId`. `Chat` реализован как Core with SignalR. `Email` реализован как Core module для SMTP-настроек, шаблонов, ручных и автоматических рассылок. `Audit` реализован как read-only module для пользователей и write-only через внутренний `IAuditLogService`. Testing Layer реализован отдельным API integration test project и не входит в production runtime.
 
-Для существующих tenant `Admin` ролей Identity seed idempotently backfill-ит полный доступ к module code `Email`. Обычным ролям Email permissions автоматически не выдаются.
+Для существующих tenant `Admin` ролей Identity seed idempotently backfill-ит полный доступ к module code `Email`. `Audit` module code уже seed-ится как системный модуль, но доступ к audit endpoints требует `Audit/Read`. Обычным ролям Email/Audit permissions автоматически не выдаются.
 
 ## Endpoints
 
@@ -549,6 +613,11 @@ Authorized organization user Email:
 - `PUT /api/email/automation`
 - `POST /api/email/automation/run`
 
+Authorized organization user Audit:
+
+- `GET /api/audit/logs`
+- `GET /api/audit/logs/{id}`
+
 Clients permissions:
 
 - `Clients / Read`
@@ -596,7 +665,11 @@ Email permissions:
 - `Email / Update`
 - `Email / Delete`
 
-Важно: JWT системного администратора подходит для system-admin endpoints. Он не является пользователем организации и не должен открывать organization endpoints, включая Clients, Catalog, Deals, Warehouse, Bonus, Chat и Email.
+Audit permissions:
+
+- `Audit / Read`
+
+Важно: JWT системного администратора подходит для system-admin endpoints. Он не является пользователем организации и не должен открывать organization endpoints, включая Clients, Catalog, Deals, Warehouse, Bonus, Chat, Email и Audit.
 
 ## Текущие настройки WebApi
 
@@ -604,6 +677,7 @@ Email permissions:
 
 - `ApplicationDbContext` через Npgsql;
 - `AddIdentityApplication()`;
+- `AddAuditApplication()`;
 - `AddChatApplication()`;
 - `AddBonusApplication()`;
 - `AddClientsApplication()`;
@@ -613,6 +687,7 @@ Email permissions:
 - `AddWarehouseApplication()`;
 - `AddInfrastructure(builder.Configuration)`;
 - `AddIdentityInfrastructure()`;
+- `AddAuditInfrastructure()`;
 - `AddChatInfrastructure()`;
 - `AddChatPresentation()`;
 - `AddBonusInfrastructure()`;
@@ -622,6 +697,7 @@ Email permissions:
 - `AddEmailInfrastructure(builder.Configuration)`;
 - `AddWarehouseInfrastructure()`;
 - controllers из `Identity.Presentation`;
+- controllers из `Audit.Presentation`;
 - controllers из `Chat.Presentation`;
 - controllers из `Bonus.Presentation`;
 - controllers из `Clients.Presentation`;
@@ -638,21 +714,24 @@ Email permissions:
 - Swagger Bearer;
 - `ExceptionHandlingMiddleware`.
 
-## Следующий модуль
+## Следующий этап
 
-После Email Campaigns Core следующий рекомендуемый backend module - **Audit Core**.
+После Email Campaigns Core реализован **Audit Core**.
 
-Почему Audit следующий:
+После Audit Core реализован **Testing Layer / API Integration Tests**.
 
-- Deals уже покрывает lifecycle sale -> warehouse deduction -> bonus write-off/accrual -> return -> warehouse return -> bonus refund/reversal;
-- Chat и Email уже закрывают базовый коммуникационный слой CRM;
-- Audit должен фиксировать ключевые действия business modules и коммуникационных модулей;
-- после Audit логично добавить API integration tests как отдельный Testing Layer.
+Testing Layer уже проверяет:
+
+- полные HTTP scenarios;
+- permissions;
+- key cross-module flows;
+- real EF migrations on PostgreSQL Testcontainers;
+- fake SMTP вместо реальной отправки писем.
+
+Следующий рекомендуемый этап - **minimal React frontend**.
 
 Дальнейший roadmap:
 
-- Audit Core;
-- API integration tests;
 - minimal React frontend;
 - Dockerization;
 - Nginx reverse proxy;
